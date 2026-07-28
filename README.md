@@ -33,11 +33,11 @@ To successfully complete this course, you must take the following tasks. Please 
 
 ---
 
-## 📜 [Step 3: Software Programming](Task-3)  
+## :bulb: [Step 3: Software Programming](Task-3)  
 **Description:** It covers all the software programming steps and artifacts.  
 **Format:** APIs in Java, Hexagonal Architecture, Vue.js and MariaDB infrastructure. 
 
-### 📜 [The Back-End Programming](Task-4)
+### 📌 [The Back-End Programming](Task-4)
 
 - APIs
   - Java 
@@ -45,7 +45,7 @@ To successfully complete this course, you must take the following tasks. Please 
 - Database
   - MariaDB running in 8080           
 
-### 📜 [The Front-End Programming](Task-5)
+### 📌 [The Front-End Programming](Task-5)
 
 - Web Page:
   - Vue.js
