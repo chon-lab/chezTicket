@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root { color-scheme: light dark; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>Modelagem UML do chezTicket</title>
+<meta name="description" content="Estrutura de diagramas UML e modelo de dados da plataforma de ingressos chezTicket — Etapa 1 de Engenharia de Software." />
+<style>
+  :root {
+    --bg: #f5f6f9;
+    --surface: #ffffff;
+    --surface-2: #eceff4;
+    --ink: #1b1a33;
+    --ink-soft: #52526b;
+    --border: #d7dbe3;
+    --accent: #0c8577;
+    --accent-ink: #0a6b60;
+    --accent-wash: #e4f3f0;
+    --danger: #cc4360;
+    --danger-wash: #fbe7ec;
+    --figure-bg: #fcfcfd;
+    --figure-border: #dfe3ea;
+    --shadow: 0 1px 2px rgba(20, 22, 40, .06), 0 8px 24px -12px rgba(20, 22, 40, .18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #131327;
+      --surface: #1c1c34;
+      --surface-2: #24243f;
+      --ink: #ececf4;
+      --ink-soft: #a7a7c1;
+      --border: #333350;
+      --accent: #3fd0bd;
+      --accent-ink: #6ee0d2;
+      --accent-wash: #17352f;
+      --danger: #ff8098;
+      --danger-wash: #3a1f28;
+      --figure-bg: #fcfcfd;
+      --figure-border: #c7cdd9;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px -14px rgba(0, 0, 0, .6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #131327;
+    --surface: #1c1c34;
+    --surface-2: #24243f;
+    --ink: #ececf4;
+    --ink-soft: #a7a7c1;
+    --border: #333350;
+    --accent: #3fd0bd;
+    --accent-ink: #6ee0d2;
+    --accent-wash: #17352f;
+    --danger: #ff8098;
+    --danger-wash: #3a1f28;
+    --figure-bg: #fcfcfd;
+    --figure-border: #c7cdd9;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px -14px rgba(0, 0, 0, .6);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1rem, 4vw, 2.5rem) 5rem;
+  }
+
+  /* ---------- Header ---------- */
+  header.masthead {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 1.75rem;
+    margin-bottom: 2.5rem;
+  }
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .74rem;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    margin: 0 0 .9rem;
+  }
+  h1 {
+    font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    font-size: clamp(2rem, 5.2vw, 3.1rem);
+    line-height: 1.08;
+    letter-spacing: -.01em;
+    text-wrap: balance;
+    margin: 0 0 .75rem;
+  }
+  .lede {
+    font-size: 1.08rem;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0 0 1.5rem;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.25rem; }
+  .chip {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .72rem;
+    letter-spacing: .04em;
+    padding: .3rem .6rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--ink-soft);
+    background: var(--surface);
+    white-space: nowrap;
+  }
+  .chip b { color: var(--ink); font-weight: 600; }
+
+  .toggle {
+    position: absolute;
+    top: clamp(1rem, 4vw, 2rem);
+    right: clamp(1rem, 4vw, 2rem);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .78rem;
+    background: var(--surface);
+    color: var(--ink-soft);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .4rem .7rem;
+    cursor: pointer;
+  }
+  .toggle:hover { color: var(--ink); border-color: var(--accent); }
+
+  /* ---------- Table of contents ---------- */
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 3rem;
+    box-shadow: var(--shadow);
+  }
+  nav.toc p {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .72rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 .75rem;
+  }
+  nav.toc ol {
+    margin: 0;
+    padding-left: 1.4rem;
+    columns: 2;
+    column-gap: 2.5rem;
+  }
+  nav.toc li { margin: .25rem 0; break-inside: avoid; }
+  nav.toc a { color: var(--ink); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent-ink); text-decoration: underline; }
+
+  /* ---------- Sections ---------- */
+  main { counter-reset: sec; }
+  section { margin-bottom: 3.75rem; scroll-margin-top: 1.5rem; }
+  h2 {
+    counter-increment: sec;
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 600;
+    font-size: clamp(1.4rem, 3.4vw, 1.9rem);
+    line-height: 1.2;
+    letter-spacing: -.005em;
+    text-wrap: balance;
+    margin: 0 0 1rem;
+    padding-bottom: .5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h2::before {
+    content: counter(sec, decimal-leading-zero);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .8em;
+    color: var(--accent-ink);
+    margin-right: .7rem;
+  }
+  h3 {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-weight: 600;
+    font-size: 1.02rem;
+    letter-spacing: .01em;
+    margin: 2rem 0 .6rem;
+  }
+  p { margin: 0 0 1rem; }
+  .prose { max-width: 68ch; }
+  .prose strong { font-weight: 600; }
+
+  /* ---------- Figures / diagrams ---------- */
+  figure { margin: 1.5rem 0 0; }
+  .plate {
+    background: var(--figure-bg);
+    border: 1px solid var(--figure-border);
+    border-radius: 12px;
+    padding: 1.5rem 1rem;
+    overflow-x: auto;
+    box-shadow: var(--shadow);
+  }
+  .plate .mermaid {
+    margin: 0;
+    text-align: center;
+    min-width: 320px;
+  }
+  figcaption {
+    font-size: .86rem;
+    color: var(--ink-soft);
+    margin-top: .7rem;
+    padding-left: .2rem;
+  }
+  figcaption b {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .8rem;
+    letter-spacing: .03em;
+    color: var(--accent-ink);
+    font-weight: 500;
+  }
+
+  /* ---------- Callouts / legends ---------- */
+  .callout {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    background: var(--surface);
+    border-radius: 0 10px 10px 0;
+    padding: 1rem 1.25rem;
+    margin: 1.5rem 0;
+  }
+  .callout.warn { border-left-color: var(--danger); }
+  .callout p:last-child { margin-bottom: 0; }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1.25rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .78rem;
+    color: var(--ink-soft);
+    margin-top: .85rem;
+  }
+  .legend span { white-space: nowrap; }
+  .legend b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- Spec tables ---------- */
+  .grid2 { display: grid; gap: 1.5rem; }
+  @media (min-width: 760px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+
+  table.spec {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .9rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 1rem 0 0;
+  }
+  table.spec caption {
+    caption-side: top;
+    text-align: left;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .78rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    padding: 0 0 .5rem;
+  }
+  table.spec th, table.spec td {
+    text-align: left;
+    vertical-align: top;
+    padding: .55rem .8rem;
+    border-bottom: 1px solid var(--border);
+  }
+  table.spec tr:last-child th, table.spec tr:last-child td { border-bottom: none; }
+  table.spec th[scope="row"] {
+    width: 34%;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .74rem;
+    font-weight: 500;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    background: var(--surface-2);
+  }
+  table.spec ol, table.spec ul { margin: 0; padding-left: 1.2rem; }
+  table.spec li { margin: .2rem 0; }
+
+  table.map {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .9rem;
+    margin-top: 1rem;
+  }
+  table.map th, table.map td {
+    text-align: left;
+    padding: .6rem .8rem;
+    border-bottom: 1px solid var(--border);
+  }
+  table.map thead th {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .74rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  table.map tbody th {
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  ul.plain { padding-left: 1.2rem; margin: 1rem 0; }
+  ul.plain li { margin: .35rem 0; }
+  code, .mono {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .88em;
+    background: var(--surface-2);
+    padding: .08em .35em;
+    border-radius: 4px;
+  }
+
+  a { color: var(--accent-ink); }
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    font-size: .82rem;
+    color: var(--ink-soft);
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" />
+</head>
+<body>
+<button class="toggle" id="themeToggle" type="button" aria-label="Alternar tema">tema: auto</button>
+
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">CEFET/RJ · Engenharia de Software · Etapa 1 — Artefatos</p>
+    <h1>Modelagem UML do chezTicket</h1>
+    <p class="lede">
+      Estrutura de análise orientada a objetos e de dados para a plataforma web de
+      venda e inscrição em eventos pagos e gratuitos. Reúne os artefatos exigidos
+      antes da programação: casos de uso, diagrama de classes de domínio, modelo
+      entidade-relacionamento e os fluxos dinâmicos de compra e validação de ingressos.
+    </p>
+    <div class="chips">
+      <span class="chip"><b>Back-end</b> Java · Hexagonal</span>
+      <span class="chip"><b>Front-end</b> React (SPA)</span>
+      <span class="chip"><b>Banco</b> MariaDB</span>
+      <span class="chip"><b>Pagamentos</b> Stripe</span>
+      <span class="chip"><b>Revisão</b> 05/09/2026</span>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Sumário">
+    <p>Sumário</p>
+    <ol>
+      <li><a href="#escopo">Escopo e visão geral</a></li>
+      <li><a href="#atores">Atores do sistema</a></li>
+      <li><a href="#casos-uso">Diagrama de casos de uso</a></li>
+      <li><a href="#descricoes">Descrições dos casos de uso</a></li>
+      <li><a href="#classes">Diagrama de classes de domínio</a></li>
+      <li><a href="#er">Modelo entidade-relacionamento</a></li>
+      <li><a href="#sequencia">Diagrama de sequência — compra</a></li>
+      <li><a href="#estados">Diagramas de estado — ciclos de vida</a></li>
+      <li><a href="#roadmap">Do modelo ao cronograma</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <!-- 1 -->
+    <section id="escopo">
+      <h2>Escopo e visão geral</h2>
+      <div class="prose">
+        <p>
+          O chezTicket conecta <strong>organizadores</strong>, que publicam eventos e
+          definem ingressos, a <strong>participantes</strong>, que compram ou se inscrevem
+          e recebem um ingresso digital com QR Code. A plataforma intermedeia o pagamento,
+          retém uma <strong>taxa de serviço</strong> (base de 10%, escalonável por volume) e
+          repassa ao organizador o valor dos ingressos vendidos.
+        </p>
+        <p>
+          Esta modelagem cobre o núcleo do produto para a apresentação e para as primeiras
+          sprints. Integrações externas (Stripe e serviço antifraude) aparecem como atores
+          de apoio; a estratégia fiscal de nota fiscal e o modelo de repasse financeiro
+          são representados, mas seu detalhamento jurídico-contábil fica fora do escopo técnico.
+        </p>
+      </div>
+
+      <div class="grid2" style="margin-top:1.5rem">
+        <div class="callout">
+          <p style="margin-bottom:.4rem"><strong>No escopo</strong></p>
+          <ul class="plain" style="margin:0">
+            <li>Cadastro/autenticação e perfis (participante, organizador, admin)</li>
+            <li>Publicação de eventos, sessões, locais, tipos de ingresso e lotes</li>
+            <li>Busca e filtros de eventos</li>
+            <li>Reserva de estoque, checkout, cupom e pagamento via Stripe</li>
+            <li>Inscrição em eventos gratuitos</li>
+            <li>Emissão de ingresso/QR Code e check-in</li>
+            <li>Cancelamento, reembolso e painel de vendas/repasses</li>
+          </ul>
+        </div>
+        <div class="callout warn">
+          <p style="margin-bottom:.4rem"><strong>Fora do escopo (agora)</strong></p>
+          <ul class="plain" style="margin:0">
+            <li>Mapa de assentos numerados</li>
+            <li>Marketplace de revenda entre usuários</li>
+            <li>Emissão automática de NF-e (depende de definição jurídica)</li>
+            <li>App móvel nativo</li>
+            <li>Programa de fidelidade / recomendação por ML</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 -->
+    <section id="atores">
+      <h2>Atores do sistema</h2>
+      <table class="spec">
+        <caption>Atores e responsabilidades</caption>
+        <tbody>
+          <tr><th scope="row">Visitante</th><td>Usuário não autenticado. Busca eventos, vê páginas de evento e cria conta.</td></tr>
+          <tr><th scope="row">Participante</th><td>Comprador autenticado. Compra ingressos, inscreve-se em eventos gratuitos, aplica cupom, transfere ingресso, solicita reembolso.</td></tr>
+          <tr><th scope="row">Organizador</th><td>Publica e edita eventos, configura sessões, ingressos e lotes, valida ingressos no acesso e acompanha vendas e repasses.</td></tr>
+          <tr><th scope="row">Administrador da plataforma</th><td>Faz curadoria de eventos, gere usuários, categorias e políticas, e audita transações e reembolsos.</td></tr>
+          <tr><th scope="row">Gateway de pagamento (Stripe)</th><td>Ator externo. Processa cobranças (Pix/cartão), confirma pagamentos por webhook e executa estornos.</td></tr>
+          <tr><th scope="row">Serviço antifraude</th><td>Ator externo. Avalia o risco da transação antes da captura do pagamento.</td></tr>
+          <tr><th scope="row">Serviço de notificações</th><td>Ator externo/temporizador. Envia e-mail/push de ingressos, lembretes e avisos de mudança.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 3 -->
+    <section id="casos-uso">
+      <h2>Diagrama de casos de uso</h2>
+      <p class="prose">
+        Visão geral das funcionalidades e de quem as aciona. As setas tracejadas
+        <code>«include»</code> marcam comportamentos sempre executados como parte de outro
+        caso de uso (processar pagamento e emitir ingresso, por exemplo).
+      </p>
+      <figure>
+        <div class="plate">
+<pre class="mermaid">
+flowchart LR
+  visitante(["Visitante"])
+  participante(["Participante"])
+  organizador(["Organizador"])
+  admin(["Admin da Plataforma"])
+  stripe(["Stripe / Gateway"])
+  antifraude(["Serviço Antifraude"])
+
+  subgraph SB["chezTicket"]
+    direction TB
+    u1["Buscar e filtrar eventos"]
+    u2["Visualizar pagina do evento"]
+    u3["Criar conta e autenticar"]
+    u4["Publicar e editar evento"]
+    u5["Configurar ingressos e lotes"]
+    u6["Comprar ingresso (evento pago)"]
+    u7["Inscrever-se (evento gratuito)"]
+    u8["Aplicar cupom de desconto"]
+    u9["Emitir ingresso e QR Code"]
+    u10["Processar pagamento"]
+    u11["Avaliar risco da transacao"]
+    u12["Validar ingresso no acesso"]
+    u13["Solicitar cancelamento e reembolso"]
+    u14["Acompanhar vendas e repasses"]
+    u15["Gerir usuarios, categorias e politicas"]
+  end
+
+  visitante --- u1
+  visitante --- u2
+  visitante --- u3
+  participante --- u2
+  participante --- u6
+  participante --- u7
+  participante --- u8
+  participante --- u13
+  organizador --- u4
+  organizador --- u5
+  organizador --- u12
+  organizador --- u14
+  admin --- u15
+  admin --- u14
+
+  u6 -. include .-> u10
+  u6 -. include .-> u9
+  u7 -. include .-> u9
+  u10 -. include .-> u11
+  u13 -. include .-> u10
+
+  u10 --- stripe
+  u11 --- antifraude
+</pre>
+        </div>
+        <figcaption><b>Figura 1</b> — Casos de uso do chezTicket (fronteira do sistema e atores de apoio).</figcaption>
+      </figure>
+    </section>
+
+    <!-- 4 -->
+    <section id="descricoes">
+      <h2>Descrições dos casos de uso</h2>
+      <p class="prose">
+        Detalhamento dos quatro casos de uso centrais. Os demais estão resumidos ao final.
+        As regras de negócio (<code>RN</code>) são numeradas para rastreio nos testes.
+      </p>
+
+      <table class="spec">
+        <caption>UC-06 · Comprar ingresso (evento pago)</caption>
+        <tbody>
+          <tr><th scope="row">Ator principal</th><td>Participante</td></tr>
+          <tr><th scope="row">Atores de apoio</th><td>Serviço antifraude, Gateway (Stripe), Serviço de notificações</td></tr>
+          <tr><th scope="row">Pré-condições</th><td>Participante autenticado; evento publicado com sessão e tipo de ingresso pago; estoque disponível; política de reembolso aceita.</td></tr>
+          <tr><th scope="row">Pós-condição (sucesso)</th><td>Pedido <code>PAGO</code>; Pagamento <code>APROVADO</code>; ingressos <code>EMITIDOS</code> com QR Code; estoque decrementado; repasse registrado; comprovante enviado.</td></tr>
+          <tr><th scope="row">Pós-condição (falha)</th><td>Estoque devolvido; Pedido <code>EXPIRADO</code> ou <code>RECUSADO</code>; nenhum valor capturado.</td></tr>
+          <tr><th scope="row">Fluxo principal</th><td>
+            <ol>
+              <li>Participante escolhe a sessão e a quantidade por tipo de ingresso.</li>
+              <li>Sistema cria uma <strong>Reserva</strong>, bloqueia o estoque e inicia a contagem de 10 minutos.</li>
+              <li>Sistema exibe o resumo: subtotal, taxa de serviço e total.</li>
+              <li>Participante informa, opcionalmente, um cupom; sistema valida e recalcula.</li>
+              <li>Participante informa o pagamento (Pix ou cartão, com parcelamento quando permitido).</li>
+              <li>Sistema envia a transação ao antifraude e obtém aprovação de risco.</li>
+              <li>Sistema cria a intenção de pagamento no gateway e conduz o checkout.</li>
+              <li>Gateway confirma o pagamento por webhook.</li>
+              <li>Sistema efetiva o Pedido, registra o Pagamento e emite os ingressos com QR Code.</li>
+              <li>Sistema envia os ingressos e registra o repasse ao organizador.</li>
+            </ol>
+          </td></tr>
+          <tr><th scope="row">Fluxos de exceção</th><td>
+            <ul>
+              <li><b>2a</b> Estoque insuficiente → indisponibilidade informada; sugere outro tipo/sessão.</li>
+              <li><b>4a</b> Cupom inválido/expirado/esgotado → rejeitado; valor original mantido.</li>
+              <li><b>6a</b> Risco reprovado → Pedido <code>RECUSADO</code>; reserva liberada.</li>
+              <li><b>8a</b> Pagamento recusado → reserva liberada automaticamente; Pedido <code>RECUSADO</code>.</li>
+              <li><b>*</b> Reserva expira (10 min) → estoque devolvido; Pedido <code>EXPIRADO</code>.</li>
+            </ul>
+          </td></tr>
+          <tr><th scope="row">Regras de negócio</th><td>
+            <ul>
+              <li><b>RN-01</b> Taxa de serviço base de 10% sobre o valor do ingresso, escalonável por volume.</li>
+              <li><b>RN-02</b> Reserva de estoque expira em 10 minutos sem confirmação de pagamento.</li>
+              <li><b>RN-03</b> Limite de ingressos por compra/CPF definido pelo organizador.</li>
+              <li><b>RN-04</b> Classificação etária exibida antes da conclusão.</li>
+              <li><b>RN-05</b> Política de reembolso apresentada e aceita antes do pagamento.</li>
+            </ul>
+          </td></tr>
+        </tbody>
+      </table>
+
+      <table class="spec">
+        <caption>UC-04 · Publicar evento</caption>
+        <tbody>
+          <tr><th scope="row">Ator principal</th><td>Organizador</td></tr>
+          <tr><th scope="row">Atores de apoio</th><td>Administrador (curadoria), Serviço de armazenamento de imagens</td></tr>
+          <tr><th scope="row">Pré-condições</th><td>Organizador autenticado, com cadastro e dados de repasse aprovados.</td></tr>
+          <tr><th scope="row">Pós-condição</th><td>Evento <code>PUBLICADO</code> e visível na busca, com sessões, local e tipos de ingresso configurados.</td></tr>
+          <tr><th scope="row">Fluxo principal</th><td>
+            <ol>
+              <li>Organizador cria o rascunho (título, descrição, categoria, classificação etária, capa).</li>
+              <li>Cadastra uma ou mais sessões (data/hora) e associa um local com capacidade.</li>
+              <li>Define os tipos de ingresso (gratuito ou pago), preços, quantidade e limite por compra.</li>
+              <li>Configura lotes com janelas de venda e ordem de virada.</li>
+              <li>Define a política de reembolso e confirma os dados de repasse.</li>
+              <li>Sistema valida a consistência (capacidade × soma de ingressos, datas, preços).</li>
+              <li>Organizador solicita a publicação.</li>
+              <li>Sistema — ou Admin, quando há curadoria — aprova e publica.</li>
+            </ol>
+          </td></tr>
+          <tr><th scope="row">Fluxos de exceção</th><td>
+            <ul>
+              <li><b>6a</b> Inconsistência → campos apontados; evento permanece <code>RASCUNHO</code>.</li>
+              <li><b>8a</b> Reprovado na curadoria → volta a <code>RASCUNHO</code> com observações.</li>
+              <li><b>*</b> Edição de evento publicado com mudança sensível (preço, data, local) → notifica compradores e pode habilitar reembolso.</li>
+            </ul>
+          </td></tr>
+          <tr><th scope="row">Regras de negócio</th><td>
+            <ul>
+              <li><b>RN-06</b> Soma das quantidades de ingressos ≤ capacidade do local/setor.</li>
+              <li><b>RN-07</b> Evento gratuito não gera cobrança ao participante.</li>
+              <li><b>RN-08</b> Remarcação de data dá direito a reembolso total.</li>
+            </ul>
+          </td></tr>
+        </tbody>
+      </table>
+
+      <table class="spec">
+        <caption>UC-11 · Validar ingresso no acesso (check-in)</caption>
+        <tbody>
+          <tr><th scope="row">Ator principal</th><td>Organizador / operador de portaria autorizado</td></tr>
+          <tr><th scope="row">Pré-condições</th><td>Sessão dentro da janela de acesso; ingresso <code>EMITIDO</code> ou <code>TRANSFERIDO</code>.</td></tr>
+          <tr><th scope="row">Pós-condição</th><td>Ingresso <code>UTILIZADO</code>; registro de <strong>CheckIn</strong> com data/hora, portão e operador.</td></tr>
+          <tr><th scope="row">Fluxo principal</th><td>
+            <ol>
+              <li>Operador abre o modo de validação da sessão.</li>
+              <li>Lê o QR Code do ingresso.</li>
+              <li>Sistema verifica autenticidade, sessão correta e status válido.</li>
+              <li>Sistema marca o ingresso como <code>UTILIZADO</code> e grava o CheckIn.</li>
+              <li>Sistema exibe a confirmação (titular e tipo de ingresso).</li>
+            </ol>
+          </td></tr>
+          <tr><th scope="row">Fluxos de exceção</th><td>
+            <ul>
+              <li><b>3a</b> Já utilizado → alerta "entrada já registrada" com a data/hora anterior.</li>
+              <li><b>3b</b> Cancelado/reembolsado → acesso negado.</li>
+              <li><b>3c</b> QR de outra sessão/evento → acesso negado.</li>
+              <li><b>*</b> Operação offline → validações enfileiradas e sincronizadas ao reconectar.</li>
+            </ul>
+          </td></tr>
+          <tr><th scope="row">Regras de negócio</th><td>
+            <ul>
+              <li><b>RN-09</b> Um ingresso permite uma única entrada.</li>
+              <li><b>RN-10</b> Apenas operadores autorizados pelo organizador validam ingressos.</li>
+            </ul>
+          </td></tr>
+        </tbody>
+      </table>
+
+      <table class="spec">
+        <caption>UC-13 · Solicitar cancelamento e reembolso</caption>
+        <tbody>
+          <tr><th scope="row">Ator principal</th><td>Participante (desistência) ou Organizador (cancelamento do evento)</td></tr>
+          <tr><th scope="row">Atores de apoio</th><td>Gateway (Stripe), setor financeiro da plataforma</td></tr>
+          <tr><th scope="row">Pré-condições</th><td>Pedido <code>PAGO</code>; ingresso não utilizado; dentro do prazo da política.</td></tr>
+          <tr><th scope="row">Pós-condição</th><td>Reembolso registrado (total ou parcial); Pagamento <code>ESTORNADO</code>; ingressos <code>CANCELADOS</code>; repasse ajustado; processo auditável.</td></tr>
+          <tr><th scope="row">Fluxo principal</th><td>
+            <ol>
+              <li>Solicitante abre o pedido e escolhe "cancelar / reembolsar".</li>
+              <li>Sistema aplica a política vigente e calcula o valor (retendo a taxa quando aplicável).</li>
+              <li>Solicitante confirma.</li>
+              <li>Sistema cria o Reembolso <code>PENDENTE</code> e cancela os ingressos.</li>
+              <li>Sistema envia o estorno ao gateway.</li>
+              <li>Gateway confirma o estorno por webhook.</li>
+              <li>Sistema marca o Reembolso como <code>PROCESSADO</code> e notifica o solicitante.</li>
+            </ol>
+          </td></tr>
+          <tr><th scope="row">Variações por cenário</th><td>
+            <ul>
+              <li>Evento cancelado pelo organizador → reembolso <strong>total</strong> automático a todos os pedidos pagos.</li>
+              <li>Evento remarcado → reembolso <strong>total</strong> mediante solicitação até a nova data.</li>
+              <li>Desistência do comprador → reembolso <strong>parcial</strong> conforme prazo/política.</li>
+              <li>Chargeback → reembolso <strong>parcial</strong> e bloqueio preventivo do ingresso.</li>
+              <li><b>6a</b> Falha no estorno → Reembolso fica <code>EM ANÁLISE</code> para tratamento manual.</li>
+            </ul>
+          </td></tr>
+          <tr><th scope="row">Regras de negócio</th><td>
+            <ul>
+              <li><b>RN-11</b> Todo reembolso é registrado e auditável pela plataforma.</li>
+              <li><b>RN-12</b> A política aplicada é a que foi aceita no momento da compra.</li>
+              <li><b>RN-13</b> Prazos respeitam a legislação de consumo e a antecedência mínima do evento.</li>
+            </ul>
+          </td></tr>
+        </tbody>
+      </table>
+
+      <h3>Demais casos de uso (resumo)</h3>
+      <table class="spec">
+        <tbody>
+          <tr><th scope="row">UC-01 Buscar e filtrar eventos</th><td>Visitante filtra por categoria, cidade, data, faixa de preço e texto livre.</td></tr>
+          <tr><th scope="row">UC-02 Criar conta e autenticar</th><td>Cadastro por e-mail/senha, verificação de e-mail e recuperação de acesso.</td></tr>
+          <tr><th scope="row">UC-03 Ver página do evento</th><td>Exibe descrição, sessões, tipos de ingresso, lote vigente e política de reembolso.</td></tr>
+          <tr><th scope="row">UC-05 Configurar ingressos e lotes</th><td>Organizador cria tipos (gratuito/pago), define quantidade, limite por compra e lotes.</td></tr>
+          <tr><th scope="row">UC-07 Inscrever-se em evento gratuito</th><td>Sem pagamento: reserva de vaga e emissão direta do ingresso/QR Code.</td></tr>
+          <tr><th scope="row">UC-08 Aplicar cupom de desconto</th><td>Valida código, validade, limite de usos e recalcula o total do pedido.</td></tr>
+          <tr><th scope="row">UC-09 Transferir ingresso</th><td>Titular envia o ingresso a outra pessoa, que confirma a titularidade.</td></tr>
+          <tr><th scope="row">UC-10 Emitir ingresso e QR Code</th><td>Gera código único assinado após confirmação de pagamento ou inscrição.</td></tr>
+          <tr><th scope="row">UC-12 Acompanhar vendas e repasses</th><td>Painel do organizador: ingressos vendidos, receita, taxa retida e repasse previsto.</td></tr>
+          <tr><th scope="row">UC-14 Emitir lista de presença</th><td>Organizador exporta participantes e status de check-in por sessão.</td></tr>
+          <tr><th scope="row">UC-15 Gerir usuários e políticas</th><td>Admin faz curadoria, gerencia categorias, taxas e auditoria de transações.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 5 -->
+    <section id="classes">
+      <h2>Diagrama de classes de domínio</h2>
+      <p class="prose">
+        Modelo dividido em dois contextos: o <strong>catálogo</strong> (o que é vendido) e a
+        <strong>venda</strong> (o que acontece na compra). Atributos derivados e
+        <em>getters/setters</em> foram omitidos; os métodos listados são os que carregam regra
+        de negócio. Multiplicidades seguem a notação UML (<code>1</code>, <code>*</code>,
+        <code>0..1</code>, <code>1..*</code>).
+      </p>
+
+      <figure>
+        <div class="plate">
+<pre class="mermaid">
+classDiagram
+  class Usuario {
+    +Long id
+    +String nome
+    +String email
+    +String senhaHash
+    +String telefone
+    +LocalDateTime dataCadastro
+    +StatusUsuario status
+  }
+  class Organizador {
+    +String razaoSocial
+    +String documento
+    +String dadosRepasse
+    +BigDecimal taxaServico
+  }
+  class Administrador {
+    +String cargo
+  }
+  Usuario &lt;|-- Organizador
+  Usuario &lt;|-- Administrador
+
+  class Categoria {
+    +Long id
+    +String nome
+  }
+  class Evento {
+    +Long id
+    +String titulo
+    +String descricao
+    +ClassificacaoEtaria classificacao
+    +String imagemCapa
+    +StatusEvento status
+    +PoliticaReembolso politica
+    +publicar()
+    +cancelar()
+  }
+  class Sessao {
+    +Long id
+    +LocalDateTime inicio
+    +LocalDateTime fim
+    +StatusSessao status
+  }
+  class Local {
+    +Long id
+    +String nome
+    +String cidade
+    +String uf
+    +int capacidadeTotal
+  }
+  class Setor {
+    +Long id
+    +String nome
+    +int capacidade
+  }
+  class TipoIngresso {
+    +Long id
+    +String nome
+    +boolean gratuito
+    +BigDecimal preco
+    +BigDecimal taxaServico
+    +int quantidadeTotal
+    +int quantidadeVendida
+    +int limitePorCompra
+    +boolean temDisponibilidade(int qtd)
+  }
+  class Lote {
+    +Long id
+    +String nome
+    +BigDecimal preco
+    +int quantidade
+    +LocalDateTime inicioVendas
+    +LocalDateTime fimVendas
+    +int ordem
+    +boolean vigente()
+  }
+  Organizador "1" --> "*" Evento : publica
+  Categoria "1" --> "*" Evento : classifica
+  Evento "1" *-- "1..*" Sessao
+  Sessao "*" --> "1" Local
+  Local "1" o-- "*" Setor
+  Sessao "1" *-- "1..*" TipoIngresso
+  TipoIngresso "*" --> "0..1" Setor : alocado em
+  TipoIngresso "1" *-- "1..*" Lote
+</pre>
+        </div>
+        <figcaption><b>Figura 2</b> — Contexto de catálogo: usuários, eventos, sessões, locais e a estrutura de ingressos/lotes.</figcaption>
+      </figure>
+
+      <figure>
+        <div class="plate">
+<pre class="mermaid">
+classDiagram
+  class Participante {
+    +Long id
+    +String cpf
+    +LocalDate dataNascimento
+    +Endereco endereco
+  }
+  class Reserva {
+    +Long id
+    +LocalDateTime expiraEm
+    +StatusReserva status
+    +boolean expirada()
+  }
+  class Pedido {
+    +Long id
+    +LocalDateTime dataHora
+    +StatusPedido status
+    +BigDecimal subtotal
+    +BigDecimal valorTaxa
+    +BigDecimal valorTotal
+    +calcularTotais()
+    +confirmar()
+    +expirar()
+  }
+  class ItemPedido {
+    +Long id
+    +int quantidade
+    +BigDecimal precoUnitario
+    +BigDecimal subtotal()
+  }
+  class Cupom {
+    +Long id
+    +String codigo
+    +TipoDesconto tipo
+    +BigDecimal valor
+    +LocalDate validade
+    +int limiteUsos
+    +int usos
+    +BigDecimal aplicar(BigDecimal base)
+  }
+  class Pagamento {
+    +Long id
+    +String gateway
+    +String idTransacao
+    +MetodoPagamento metodo
+    +int parcelas
+    +BigDecimal valor
+    +StatusPagamento status
+    +LocalDateTime dataHora
+  }
+  class Reembolso {
+    +Long id
+    +MotivoReembolso motivo
+    +TipoReembolso tipo
+    +BigDecimal valor
+    +StatusReembolso status
+    +LocalDateTime solicitadoEm
+    +LocalDateTime processadoEm
+  }
+  class Ingresso {
+    +Long id
+    +String codigoQR
+    +StatusIngresso status
+    +String titular
+    +LocalDateTime dataEmissao
+    +LocalDateTime dataCheckIn
+    +validar()
+    +transferir(String novoTitular)
+  }
+  class CheckIn {
+    +Long id
+    +LocalDateTime dataHora
+    +String portao
+    +String operador
+  }
+  class RepasseFinanceiro {
+    +Long id
+    +BigDecimal valorBruto
+    +BigDecimal valorTaxa
+    +BigDecimal valorLiquido
+    +StatusRepasse status
+    +LocalDate dataPrevista
+  }
+  class TipoIngresso {
+    &lt;&lt;do catalogo&gt;&gt;
+  }
+  class Evento {
+    &lt;&lt;do catalogo&gt;&gt;
+  }
+
+  Participante "1" --> "*" Pedido : faz
+  Participante "1" --> "*" Reserva : inicia
+  Reserva "1" --> "0..1" Pedido : converte-se em
+  Pedido "1" *-- "1..*" ItemPedido
+  ItemPedido "*" --> "1" TipoIngresso
+  Pedido "*" --> "0..1" Cupom : aplica
+  Pedido "1" --> "1" Pagamento : quitado por
+  Pedido "1" *-- "*" Ingresso : gera
+  Ingresso "*" --> "1" TipoIngresso : tipificado por
+  Ingresso "1" --> "0..1" CheckIn : validado por
+  Pagamento "1" --> "*" Reembolso : origina
+  Evento "1" --> "*" RepasseFinanceiro : consolida
+</pre>
+        </div>
+        <figcaption><b>Figura 3</b> — Contexto de venda: reserva, pedido, pagamento, emissão de ingressos, check-in e repasse.</figcaption>
+      </figure>
+
+      <div class="legend">
+        <span><b>&lt;|--</b> herança</span>
+        <span><b>*--</b> composição</span>
+        <span><b>o--</b> agregação</span>
+        <span><b>--&gt;</b> associação dirigida</span>
+        <span><b>StatusPedido</b> = enum</span>
+      </div>
+    </section>
+
+    <!-- 6 -->
+    <section id="er">
+      <h2>Modelo entidade-relacionamento</h2>
+      <p class="prose">
+        Duas visões complementares: o <strong>modelo conceitual</strong> na notação de Chen
+        (retângulos = entidades, losangos = relacionamentos, círculos = atributos, com
+        cardinalidade <code>1</code>/<code>N</code>/<code>M</code>), e o <strong>modelo lógico</strong>
+        em notação pé-de-galinha, já com chaves e tipos — base para o modelo físico em SQL
+        (MariaDB) da Etapa 1.
+      </p>
+
+      <figure>
+        <div class="plate">
+<pre class="mermaid">
+flowchart TB
+  classDef ent fill:#e8eef7,stroke:#33415c,stroke-width:1px,color:#1c1b3a;
+  classDef rel fill:#fbe3e9,stroke:#c2415a,color:#1c1b3a;
+  classDef att fill:#e3f4f0,stroke:#0c8577,color:#1c1b3a;
+
+  ORG[ORGANIZADOR]:::ent
+  EVE[EVENTO]:::ent
+  SES[SESSAO]:::ent
+  LOC[LOCAL]:::ent
+  TIP[TIPO_INGRESSO]:::ent
+  PAR[PARTICIPANTE]:::ent
+  PED[PEDIDO]:::ent
+  ING[INGRESSO]:::ent
+  PAG[PAGAMENTO]:::ent
+
+  R1{publica}:::rel
+  R2{possui}:::rel
+  R3{sediada_em}:::rel
+  R4{oferece}:::rel
+  R5{faz}:::rel
+  R6{contem}:::rel
+  R7{gera}:::rel
+  R8{quita}:::rel
+  R9{refere}:::rel
+
+  ORG ---|"1"| R1
+  R1 ---|"N"| EVE
+  EVE ---|"1"| R2
+  R2 ---|"N"| SES
+  SES ---|"N"| R3
+  R3 ---|"1"| LOC
+  SES ---|"1"| R4
+  R4 ---|"N"| TIP
+  PAR ---|"1"| R5
+  R5 ---|"N"| PED
+  PED ---|"N"| R6
+  R6 ---|"M"| TIP
+  PED ---|"1"| R7
+  R7 ---|"N"| ING
+  PED ---|"1"| R8
+  R8 ---|"1"| PAG
+  ING ---|"N"| R9
+  R9 ---|"1"| TIP
+
+  A1((quantidade)):::att
+  A2((preco_unitario)):::att
+  R6 --- A1
+  R6 --- A2
+</pre>
+        </div>
+        <figcaption><b>Figura 4</b> — Modelo conceitual (Chen), recorte central. O relacionamento <code>contem</code> é N:M com atributos próprios → dá origem à entidade associativa <code>ITEM_PEDIDO</code>.</figcaption>
+      </figure>
+
+      <figure>
+        <div class="plate">
+<pre class="mermaid">
+erDiagram
+  USUARIO ||--o| PARTICIPANTE : especializa
+  USUARIO ||--o| ORGANIZADOR : especializa
+  USUARIO ||--o| ADMINISTRADOR : especializa
+  ORGANIZADOR ||--o{ EVENTO : publica
+  CATEGORIA ||--o{ EVENTO : classifica
+  EVENTO ||--|{ SESSAO : possui
+  LOCAL ||--o{ SESSAO : sedia
+  LOCAL ||--o{ SETOR : divide
+  SESSAO ||--|{ TIPO_INGRESSO : oferece
+  SETOR |o--o{ TIPO_INGRESSO : aloca
+  TIPO_INGRESSO ||--o{ LOTE : escalona
+  PARTICIPANTE ||--o{ RESERVA : inicia
+  RESERVA ||--o| PEDIDO : converte
+  PARTICIPANTE ||--o{ PEDIDO : realiza
+  PEDIDO ||--|{ ITEM_PEDIDO : contem
+  LOTE ||--o{ ITEM_PEDIDO : referencia
+  CUPOM |o--o{ PEDIDO : aplica
+  PEDIDO ||--|| PAGAMENTO : quita
+  PEDIDO ||--o{ INGRESSO : gera
+  TIPO_INGRESSO ||--o{ INGRESSO : tipifica
+  INGRESSO ||--o| CHECKIN : valida
+  PAGAMENTO ||--o{ REEMBOLSO : origina
+  EVENTO ||--o{ REPASSE_FINANCEIRO : consolida
+
+  USUARIO {
+    bigint id PK
+    varchar nome
+    varchar email UK
+    varchar senha_hash
+    varchar telefone
+    datetime data_cadastro
+    enum status
+  }
+  ORGANIZADOR {
+    bigint usuario_id PK
+    varchar razao_social
+    varchar documento UK
+    varchar dados_repasse
+    decimal taxa_servico
+  }
+  EVENTO {
+    bigint id PK
+    bigint organizador_id FK
+    bigint categoria_id FK
+    varchar titulo
+    text descricao
+    enum classificacao_etaria
+    varchar imagem_capa
+    enum status
+    enum politica_reembolso
+    datetime data_publicacao
+  }
+  SESSAO {
+    bigint id PK
+    bigint evento_id FK
+    bigint local_id FK
+    datetime inicio
+    datetime fim
+    enum status
+  }
+  LOCAL {
+    bigint id PK
+    varchar nome
+    varchar endereco
+    varchar cidade
+    char uf
+    int capacidade_total
+  }
+  TIPO_INGRESSO {
+    bigint id PK
+    bigint sessao_id FK
+    bigint setor_id FK
+    varchar nome
+    boolean gratuito
+    decimal preco
+    decimal taxa_servico
+    int quantidade_total
+    int quantidade_vendida
+    int limite_por_compra
+  }
+  LOTE {
+    bigint id PK
+    bigint tipo_ingresso_id FK
+    varchar nome
+    decimal preco
+    int quantidade
+    datetime inicio_vendas
+    datetime fim_vendas
+    int ordem
+  }
+  PEDIDO {
+    bigint id PK
+    bigint participante_id FK
+    bigint cupom_id FK
+    datetime data_hora
+    enum status
+    decimal subtotal
+    decimal valor_taxa
+    decimal valor_total
+  }
+  ITEM_PEDIDO {
+    bigint id PK
+    bigint pedido_id FK
+    bigint lote_id FK
+    int quantidade
+    decimal preco_unitario
+  }
+  INGRESSO {
+    bigint id PK
+    bigint pedido_id FK
+    bigint tipo_ingresso_id FK
+    varchar codigo_qr UK
+    enum status
+    varchar titular
+    datetime data_emissao
+    datetime data_checkin
+  }
+  PAGAMENTO {
+    bigint id PK
+    bigint pedido_id FK
+    varchar gateway
+    varchar id_transacao
+    enum metodo
+    int parcelas
+    decimal valor
+    enum status
+    datetime data_hora
+  }
+  REEMBOLSO {
+    bigint id PK
+    bigint pagamento_id FK
+    enum motivo
+    enum tipo
+    decimal valor
+    enum status
+    datetime solicitado_em
+    datetime processado_em
+  }
+  CHECKIN {
+    bigint id PK
+    bigint ingresso_id FK
+    datetime data_hora
+    varchar portao
+    varchar operador
+  }
+</pre>
+        </div>
+        <figcaption><b>Figura 5</b> — Modelo lógico (pé-de-galinha). <code>PARTICIPANTE</code>, <code>ORGANIZADOR</code> e <code>ADMINISTRADOR</code> especializam <code>USUARIO</code> (herança por tabela).</figcaption>
+      </figure>
+
+      <div class="legend">
+        <span><b>||--o{</b> um-para-muitos (0..N)</span>
+        <span><b>||--|{</b> um-para-muitos (1..N)</span>
+        <span><b>||--||</b> um-para-um</span>
+        <span><b>|o--o{</b> zero/um para muitos</span>
+        <span><b>PK / FK / UK</b> chave primária / estrangeira / única</span>
+      </div>
+    </section>
+
+    <!-- 7 -->
+    <section id="sequencia">
+      <h2>Diagrama de sequência — compra de ingresso</h2>
+      <p class="prose">
+        Realização dinâmica do <strong>UC-06</strong>. Mostra a reserva com bloqueio de
+        estoque, a checagem antifraude, o <em>PaymentIntent</em> no Stripe e a confirmação
+        assíncrona por <em>webhook</em> que efetiva o pedido e emite os ingressos.
+      </p>
+      <figure>
+        <div class="plate">
+<pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor P as Participante
+  participant W as Front-end (React)
+  participant API as API chezTicket
+  participant DOM as Dominio (Reserva/Estoque)
+  participant DB as MariaDB
+  participant AF as Antifraude
+  participant S as Stripe
+
+  P->>W: Seleciona sessao e tipos de ingresso
+  W->>API: POST /reservas
+  API->>DOM: criarReserva(itens)
+  DOM->>DB: bloqueia e decrementa estoque
+  DB-->>DOM: estoque confirmado
+  DOM-->>API: Reserva (expira em 10 min)
+  API-->>W: 201 reservaId + resumo + taxa
+
+  P->>W: Confirma dados e paga
+  W->>API: POST /pedidos (reservaId, cupom?, metodo)
+  API->>AF: avaliarRisco(pedido)
+  AF-->>API: score aprovado
+  API->>S: cria PaymentIntent (valor + taxa)
+  S-->>W: client_secret
+  W->>S: confirma pagamento (Pix / cartao)
+
+  S-->>API: webhook payment_intent.succeeded
+  API->>DOM: confirmarPedido(reservaId)
+  DOM->>DB: Pedido = PAGO, Pagamento = APROVADO
+  DOM->>DB: emite Ingressos + QR Code
+  DOM->>DB: registra RepasseFinanceiro
+  API-->>P: e-mail / push com ingressos
+
+  Note over API,S: Timeout ou falha no pagamento -> reserva expira, estoque devolvido e Pedido = EXPIRADO
+</pre>
+        </div>
+        <figcaption><b>Figura 6</b> — Fluxo de compra com reserva temporária e confirmação por webhook do gateway.</figcaption>
+      </figure>
+    </section>
+
+    <!-- 8 -->
+    <section id="estados">
+      <h2>Diagramas de estado — ciclos de vida</h2>
+      <p class="prose">
+        Os dois objetos com ciclo de vida mais rico. O <strong>Ingresso</strong> nasce como
+        capacidade disponível e termina utilizado ou cancelado; o <strong>Pedido</strong>
+        governa a janela de pagamento e o pós-venda (reembolso).
+      </p>
+
+      <div class="grid2">
+        <figure>
+          <div class="plate">
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> Disponivel : lote publicado
+  Disponivel --> Reservado : item no checkout
+  Reservado --> Disponivel : reserva expira
+  Reservado --> Emitido : pagamento aprovado + QR
+  Emitido --> Transferido : titular transfere
+  Transferido --> Emitido : novo titular aceita
+  Emitido --> Utilizado : check-in validado
+  Emitido --> Cancelado : evento cancelado / reembolso
+  Transferido --> Cancelado : evento cancelado / reembolso
+  Utilizado --> [*]
+  Cancelado --> [*]
+</pre>
+          </div>
+          <figcaption><b>Figura 7</b> — Ciclo de vida do <code>Ingresso</code>.</figcaption>
+        </figure>
+
+        <figure>
+          <div class="plate">
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> AguardandoPagamento : pedido criado
+  AguardandoPagamento --> Pago : webhook succeeded
+  AguardandoPagamento --> Expirado : reserva expira
+  AguardandoPagamento --> Recusado : antifraude / gateway nega
+  Recusado --> [*]
+  Expirado --> [*]
+  Pago --> Reembolsado : cancelamento / chargeback
+  Pago --> Concluido : evento realizado
+  Reembolsado --> [*]
+  Concluido --> [*]
+</pre>
+          </div>
+          <figcaption><b>Figura 8</b> — Ciclo de vida do <code>Pedido</code>.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- 9 -->
+    <section id="roadmap">
+      <h2>Do modelo ao cronograma</h2>
+      <p class="prose">
+        Como cada artefato desta modelagem alimenta as sprints quinzenais já previstas
+        (31/08 – 29/11/2026).
+      </p>
+      <table class="map">
+        <thead>
+          <tr><th>Artefato UML</th><th>Alimenta</th><th>Fase do cronograma</th></tr>
+        </thead>
+        <tbody>
+          <tr><th></th><td></td><td>&amp;</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout" style="margin-top:2rem">
+        <p style="margin-bottom:.4rem"><strong>Próximos passos sugeridos</strong></p>
+        <ul class="plain" style="margin:0">
+          <li></li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    chezTicket · Modelagem UML da Etapa 1 (Engenharia de Software) · revisão de 05/09/2026 ·
+    diagramas em notação UML 2.5 e ER (Chen / pé-de-galinha).
+  </footer>
+</div>
+
+<script>
+  (function () {
+    var btn = document.getElementById("themeToggle");
+    var root = document.documentElement;
+    var order = ["auto", "light", "dark"];
+    var stored;
+    try { stored = localStorage.getItem("chezticket-theme"); } catch (e) { stored = null; }
+    var current = order.indexOf(stored) > -1 ? stored : "auto";
+
+    function apply(mode) {
+      if (mode === "auto") root.removeAttribute("data-theme");
+      else root.setAttribute("data-theme", mode);
+      btn.textContent = "tema: " + mode;
+      try { localStorage.setItem("chezticket-theme", mode); } catch (e) {}
+    }
+    apply(current);
+
+    btn.addEventListener("click", function () {
+      current = order[(order.indexOf(current) + 1) % order.length];
+      apply(current);
+    });
+  })();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  window.addEventListener("DOMContentLoaded", function () {
+    if (!window.mermaid) return;
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: "loose",
+      theme: "default",
+      flowchart: { useMaxWidth: true, htmlLabels: true },
+      themeVariables: { fontFamily: "IBM Plex Sans, sans-serif" }
+    });
+  });
+</script>
+</body>
+</html>

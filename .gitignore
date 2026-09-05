@@ -427,3 +427,26 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# ---------------------------------------------------------------------------
+# chezTicket — Java / Maven / Node / Docker
+# ---------------------------------------------------------------------------
+target/
+build/
+dist/
+*.class
+node_modules/
+.env
+.env.local
+*.iml
+.idea/
+
+# ---------------------------------------------------------------------------
+# Este repositório versiona apenas os artefatos de documentação:
+#   docs/          — modelagem, diagramas
+#   presentation/  — apresentações e cronograma
+# Código e infraestrutura ficam fora do controle de versão aqui.
+# ---------------------------------------------------------------------------
+/backend/
+/docker-compose.yml
+/.env.example
