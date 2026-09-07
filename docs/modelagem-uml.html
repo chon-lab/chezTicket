@@ -423,8 +423,6 @@
         <div class="callout warn">
           <p style="margin-bottom:.4rem"><strong>Fora do escopo (agora)</strong></p>
           <ul class="plain" style="margin:0">
-            <li>Mapa de assentos numerados</li>
-            <li>Marketplace de revenda entre usuários</li>
             <li>Emissão automática de NF-e (depende de definição jurídica)</li>
             <li>App móvel nativo</li>
             <li>Programa de fidelidade / recomendação por ML</li>
@@ -444,7 +442,6 @@
           <tr><th scope="row">Organizador</th><td>Publica e edita eventos, configura sessões, ingressos e lotes, valida ingressos no acesso e acompanha vendas e repasses.</td></tr>
           <tr><th scope="row">Administrador da plataforma</th><td>Faz curadoria de eventos, gere usuários, categorias e políticas, e audita transações e reembolsos.</td></tr>
           <tr><th scope="row">Gateway de pagamento (Stripe)</th><td>Ator externo. Processa cobranças (Pix/cartão), confirma pagamentos por webhook e executa estornos.</td></tr>
-          <tr><th scope="row">Serviço antifraude</th><td>Ator externo. Avalia o risco da transação antes da captura do pagamento.</td></tr>
           <tr><th scope="row">Serviço de notificações</th><td>Ator externo/temporizador. Envia e-mail/push de ingressos, lembretes e avisos de mudança.</td></tr>
         </tbody>
       </table>
@@ -1252,27 +1249,21 @@ stateDiagram-v2
         Como cada artefato desta modelagem alimenta as sprints quinzenais já previstas
         (31/08 – 29/11/2026).
       </p>
-      <table class="map">
-        <thead>
-          <tr><th>Artefato UML</th><th>Alimenta</th><th>Fase do cronograma</th></tr>
-        </thead>
-        <tbody>
-          <tr><th></th><td></td><td>&amp;</td></tr>
-        </tbody>
-      </table>
 
       <div class="callout" style="margin-top:2rem">
         <p style="margin-bottom:.4rem"><strong>Próximos passos sugeridos</strong></p>
         <ul class="plain" style="margin:0">
-          <li></li>
+          <li>Aplicação da estrutura hexagonal (domain / application / adapters)</li>
+          <li>CRUD de eventos (criar, editar, listar, cancelar)</li>
+          <li>Entrega da primeira proposta do Figma</li>
+          <li>Conexão do back-end com o MariaDB</li>
         </ul>
       </div>
     </section>
   </main>
 
   <footer>
-    chezTicket · Modelagem UML da Etapa 1 (Engenharia de Software) · revisão de 05/09/2026 ·
-    diagramas em notação UML 2.5 e ER (Chen / pé-de-galinha).
+    chezTicket · Modelagem UML da Etapa 1 · revisão de diagramas em notação UML 2.5 e ER (Chen / pé-de-galinha).
   </footer>
 </div>
 
