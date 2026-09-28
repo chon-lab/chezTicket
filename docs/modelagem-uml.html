@@ -412,7 +412,7 @@
           <p style="margin-bottom:.4rem"><strong>No escopo</strong></p>
           <ul class="plain" style="margin:0">
             <li>Cadastro/autenticação e perfis (participante, organizador, admin)</li>
-            <li>Publicação de eventos, sessões, locais, tipos de ingresso e lotes</li>
+            <li>Publicação de eventos, sessões, locais e tipos de ingresso</li>
             <li>Busca e filtros de eventos</li>
             <li>Reserva de estoque, checkout, cupom e pagamento via Stripe</li>
             <li>Inscrição em eventos gratuitos</li>
@@ -438,8 +438,8 @@
         <caption>Atores e responsabilidades</caption>
         <tbody>
           <tr><th scope="row">Visitante</th><td>Usuário não autenticado. Busca eventos, vê páginas de evento e cria conta.</td></tr>
-          <tr><th scope="row">Participante</th><td>Comprador autenticado. Compra ingressos, inscreve-se em eventos gratuitos, aplica cupom, transfere ingресso, solicita reembolso.</td></tr>
-          <tr><th scope="row">Organizador</th><td>Publica e edita eventos, configura sessões, ingressos e lotes, valida ingressos no acesso e acompanha vendas e repasses.</td></tr>
+          <tr><th scope="row">Participante</th><td>Comprador autenticado. Compra ingressos, inscreve-se em eventos gratuitos, aplica cupom, transfere ingresso, solicita reembolso.</td></tr>
+          <tr><th scope="row">Organizador</th><td>Publica e edita eventos, configura sessões, ingressos e preços, valida ingressos no acesso e acompanha vendas e repasses.</td></tr>
           <tr><th scope="row">Administrador da plataforma</th><td>Faz curadoria de eventos, gere usuários, categorias e políticas, e audita transações e reembolsos.</td></tr>
           <tr><th scope="row">Gateway de pagamento (Stripe)</th><td>Ator externo. Processa cobranças (Pix/cartão), confirma pagamentos por webhook e executa estornos.</td></tr>
           <tr><th scope="row">Serviço de notificações</th><td>Ator externo/temporizador. Envia e-mail/push de ingressos, lembretes e avisos de mudança.</td></tr>
@@ -472,7 +472,7 @@ flowchart LR
     u2["Visualizar pagina do evento"]
     u3["Criar conta e autenticar"]
     u4["Publicar e editar evento"]
-    u5["Configurar ingressos e lotes"]
+    u5["Configurar ingressos e precos"]
     u6["Comprar ingresso (evento pago)"]
     u7["Inscrever-se (evento gratuito)"]
     u8["Aplicar cupom de desconto"]
@@ -483,6 +483,9 @@ flowchart LR
     u13["Solicitar cancelamento e reembolso"]
     u14["Acompanhar vendas e repasses"]
     u15["Gerir usuarios, categorias e politicas"]
+    u16["Transferir ingresso"]
+    u17["Emitir lista de presenca"]
+    u18["Estornar pagamento"]
   end
 
   visitante --- u1
@@ -493,10 +496,12 @@ flowchart LR
   participante --- u7
   participante --- u8
   participante --- u13
+  participante --- u16
   organizador --- u4
   organizador --- u5
   organizador --- u12
   organizador --- u14
+  organizador --- u17
   admin --- u15
   admin --- u14
 
@@ -504,10 +509,11 @@ flowchart LR
   u6 -. include .-> u9
   u7 -. include .-> u9
   u10 -. include .-> u11
-  u13 -. include .-> u10
+  u13 -. include .-> u18
 
   u10 --- stripe
   u11 --- antifraude
+  u18 --- stripe
 </pre>
         </div>
         <figcaption><b>Figura 1</b> — Casos de uso do chezTicket (fronteira do sistema e atores de apoio).</figcaption>
@@ -577,7 +583,6 @@ flowchart LR
               <li>Organizador cria o rascunho (título, descrição, categoria, classificação etária, capa).</li>
               <li>Cadastra uma ou mais sessões (data/hora) e associa um local com capacidade.</li>
               <li>Define os tipos de ingresso (gratuito ou pago), preços, quantidade e limite por compra.</li>
-              <li>Configura lotes com janelas de venda e ordem de virada.</li>
               <li>Define a política de reembolso e confirma os dados de repasse.</li>
               <li>Sistema valida a consistência (capacidade × soma de ingressos, datas, preços).</li>
               <li>Organizador solicita a publicação.</li>
@@ -593,7 +598,7 @@ flowchart LR
           </td></tr>
           <tr><th scope="row">Regras de negócio</th><td>
             <ul>
-              <li><b>RN-06</b> Soma das quantidades de ingressos ≤ capacidade do local/setor.</li>
+              <li><b>RN-06</b> Soma das quantidades de ingressos ≤ capacidade do local.</li>
               <li><b>RN-07</b> Evento gratuito não gera cobrança ao participante.</li>
               <li><b>RN-08</b> Remarcação de data dá direito a reembolso total.</li>
             </ul>
@@ -606,13 +611,13 @@ flowchart LR
         <tbody>
           <tr><th scope="row">Ator principal</th><td>Organizador / operador de portaria autorizado</td></tr>
           <tr><th scope="row">Pré-condições</th><td>Sessão dentro da janela de acesso; ingresso <code>EMITIDO</code> ou <code>TRANSFERIDO</code>.</td></tr>
-          <tr><th scope="row">Pós-condição</th><td>Ingresso <code>UTILIZADO</code>; registro de <strong>CheckIn</strong> com data/hora, portão e operador.</td></tr>
+          <tr><th scope="row">Pós-condição</th><td>Ingresso <code>UTILIZADO</code>; dados de check-in (data/hora, portão e operador) gravados no próprio ingresso.</td></tr>
           <tr><th scope="row">Fluxo principal</th><td>
             <ol>
               <li>Operador abre o modo de validação da sessão.</li>
               <li>Lê o QR Code do ingresso.</li>
               <li>Sistema verifica autenticidade, sessão correta e status válido.</li>
-              <li>Sistema marca o ingresso como <code>UTILIZADO</code> e grava o CheckIn.</li>
+              <li>Sistema marca o ingresso como <code>UTILIZADO</code> e grava data/hora, portão e operador do check-in.</li>
               <li>Sistema exibe a confirmação (titular e tipo de ingresso).</li>
             </ol>
           </td></tr>
@@ -675,8 +680,8 @@ flowchart LR
         <tbody>
           <tr><th scope="row">UC-01 Buscar e filtrar eventos</th><td>Visitante filtra por categoria, cidade, data, faixa de preço e texto livre.</td></tr>
           <tr><th scope="row">UC-02 Criar conta e autenticar</th><td>Cadastro por e-mail/senha, verificação de e-mail e recuperação de acesso.</td></tr>
-          <tr><th scope="row">UC-03 Ver página do evento</th><td>Exibe descrição, sessões, tipos de ingresso, lote vigente e política de reembolso.</td></tr>
-          <tr><th scope="row">UC-05 Configurar ingressos e lotes</th><td>Organizador cria tipos (gratuito/pago), define quantidade, limite por compra e lotes.</td></tr>
+          <tr><th scope="row">UC-03 Ver página do evento</th><td>Exibe descrição, sessões, tipos de ingresso e política de reembolso.</td></tr>
+          <tr><th scope="row">UC-05 Configurar ingressos e preços</th><td>Organizador cria tipos (gratuito/pago), define preço, quantidade e limite por compra.</td></tr>
           <tr><th scope="row">UC-07 Inscrever-se em evento gratuito</th><td>Sem pagamento: reserva de vaga e emissão direta do ingresso/QR Code.</td></tr>
           <tr><th scope="row">UC-08 Aplicar cupom de desconto</th><td>Valida código, validade, limite de usos e recalcula o total do pedido.</td></tr>
           <tr><th scope="row">UC-09 Transferir ingresso</th><td>Titular envia o ingresso a outra pessoa, que confirma a titularidade.</td></tr>
@@ -752,11 +757,6 @@ classDiagram
     +String uf
     +int capacidadeTotal
   }
-  class Setor {
-    +Long id
-    +String nome
-    +int capacidade
-  }
   class TipoIngresso {
     +Long id
     +String nome
@@ -768,27 +768,14 @@ classDiagram
     +int limitePorCompra
     +boolean temDisponibilidade(int qtd)
   }
-  class Lote {
-    +Long id
-    +String nome
-    +BigDecimal preco
-    +int quantidade
-    +LocalDateTime inicioVendas
-    +LocalDateTime fimVendas
-    +int ordem
-    +boolean vigente()
-  }
   Organizador "1" --> "*" Evento : publica
   Categoria "1" --> "*" Evento : classifica
   Evento "1" *-- "1..*" Sessao
   Sessao "*" --> "1" Local
-  Local "1" o-- "*" Setor
   Sessao "1" *-- "1..*" TipoIngresso
-  TipoIngresso "*" --> "0..1" Setor : alocado em
-  TipoIngresso "1" *-- "1..*" Lote
 </pre>
         </div>
-        <figcaption><b>Figura 2</b> — Contexto de catálogo: usuários, eventos, sessões, locais e a estrutura de ingressos/lotes.</figcaption>
+        <figcaption><b>Figura 2</b> — Contexto de catálogo: usuários, eventos, sessões, locais e a estrutura de ingressos.</figcaption>
       </figure>
 
       <figure>
@@ -860,14 +847,10 @@ classDiagram
     +String titular
     +LocalDateTime dataEmissao
     +LocalDateTime dataCheckIn
+    +String portaoCheckIn
+    +String operadorCheckIn
     +validar()
     +transferir(String novoTitular)
-  }
-  class CheckIn {
-    +Long id
-    +LocalDateTime dataHora
-    +String portao
-    +String operador
   }
   class RepasseFinanceiro {
     +Long id
@@ -893,12 +876,11 @@ classDiagram
   Pedido "1" --> "1" Pagamento : quitado por
   Pedido "1" *-- "*" Ingresso : gera
   Ingresso "*" --> "1" TipoIngresso : tipificado por
-  Ingresso "1" --> "0..1" CheckIn : validado por
   Pagamento "1" --> "*" Reembolso : origina
   Evento "1" --> "*" RepasseFinanceiro : consolida
 </pre>
         </div>
-        <figcaption><b>Figura 3</b> — Contexto de venda: reserva, pedido, pagamento, emissão de ingressos, check-in e repasse.</figcaption>
+        <figcaption><b>Figura 3</b> — Contexto de venda: reserva, pedido, pagamento, emissão de ingressos (com check-in embutido) e repasse.</figcaption>
       </figure>
 
       <div class="legend">
@@ -988,20 +970,16 @@ erDiagram
   CATEGORIA ||--o{ EVENTO : classifica
   EVENTO ||--|{ SESSAO : possui
   LOCAL ||--o{ SESSAO : sedia
-  LOCAL ||--o{ SETOR : divide
   SESSAO ||--|{ TIPO_INGRESSO : oferece
-  SETOR |o--o{ TIPO_INGRESSO : aloca
-  TIPO_INGRESSO ||--o{ LOTE : escalona
   PARTICIPANTE ||--o{ RESERVA : inicia
   RESERVA ||--o| PEDIDO : converte
   PARTICIPANTE ||--o{ PEDIDO : realiza
   PEDIDO ||--|{ ITEM_PEDIDO : contem
-  LOTE ||--o{ ITEM_PEDIDO : referencia
+  TIPO_INGRESSO ||--o{ ITEM_PEDIDO : referencia
   CUPOM |o--o{ PEDIDO : aplica
   PEDIDO ||--|| PAGAMENTO : quita
   PEDIDO ||--o{ INGRESSO : gera
   TIPO_INGRESSO ||--o{ INGRESSO : tipifica
-  INGRESSO ||--o| CHECKIN : valida
   PAGAMENTO ||--o{ REEMBOLSO : origina
   EVENTO ||--o{ REPASSE_FINANCEIRO : consolida
 
@@ -1052,7 +1030,6 @@ erDiagram
   TIPO_INGRESSO {
     bigint id PK
     bigint sessao_id FK
-    bigint setor_id FK
     varchar nome
     boolean gratuito
     decimal preco
@@ -1060,16 +1037,6 @@ erDiagram
     int quantidade_total
     int quantidade_vendida
     int limite_por_compra
-  }
-  LOTE {
-    bigint id PK
-    bigint tipo_ingresso_id FK
-    varchar nome
-    decimal preco
-    int quantidade
-    datetime inicio_vendas
-    datetime fim_vendas
-    int ordem
   }
   PEDIDO {
     bigint id PK
@@ -1084,7 +1051,7 @@ erDiagram
   ITEM_PEDIDO {
     bigint id PK
     bigint pedido_id FK
-    bigint lote_id FK
+    bigint tipo_ingresso_id FK
     int quantidade
     decimal preco_unitario
   }
@@ -1097,6 +1064,8 @@ erDiagram
     varchar titular
     datetime data_emissao
     datetime data_checkin
+    varchar portao_checkin
+    varchar operador_checkin
   }
   PAGAMENTO {
     bigint id PK
@@ -1118,13 +1087,6 @@ erDiagram
     enum status
     datetime solicitado_em
     datetime processado_em
-  }
-  CHECKIN {
-    bigint id PK
-    bigint ingresso_id FK
-    datetime data_hora
-    varchar portao
-    varchar operador
   }
 </pre>
         </div>
@@ -1205,7 +1167,7 @@ sequenceDiagram
           <div class="plate">
 <pre class="mermaid">
 stateDiagram-v2
-  [*] --> Disponivel : lote publicado
+  [*] --> Disponivel : tipo de ingresso publicado
   Disponivel --> Reservado : item no checkout
   Reservado --> Disponivel : reserva expira
   Reservado --> Emitido : pagamento aprovado + QR
