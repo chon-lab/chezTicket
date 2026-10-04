@@ -1,0 +1,6 @@
+# Perfil ativado dentro do container (SPRING_PROFILES_ACTIVE=docker).
+# As credenciais chegam por variáveis de ambiente no docker-compose.yml;
+# aqui fica apenas o host do banco na rede interna do Compose.
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://mariadb:3306/chezticket}

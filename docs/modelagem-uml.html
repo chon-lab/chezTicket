@@ -401,7 +401,7 @@
         </p>
         <p>
           Esta modelagem cobre o núcleo do produto para a apresentação e para as primeiras
-          sprints. Integrações externas (Stripe e serviço antifraude) aparecem como atores
+          sprints. Integrações externas (Stripe) aparecem como atores
           de apoio; a estratégia fiscal de nota fiscal e o modelo de repasse financeiro
           são representados, mas seu detalhamento jurídico-contábil fica fora do escopo técnico.
         </p>
@@ -464,7 +464,6 @@ flowchart LR
   organizador(["Organizador"])
   admin(["Admin da Plataforma"])
   stripe(["Stripe / Gateway"])
-  antifraude(["Serviço Antifraude"])
 
   subgraph SB["chezTicket"]
     direction TB
@@ -478,7 +477,6 @@ flowchart LR
     u8["Aplicar cupom de desconto"]
     u9["Emitir ingresso e QR Code"]
     u10["Processar pagamento"]
-    u11["Avaliar risco da transacao"]
     u12["Validar ingresso no acesso"]
     u13["Solicitar cancelamento e reembolso"]
     u14["Acompanhar vendas e repasses"]
@@ -508,11 +506,9 @@ flowchart LR
   u6 -. include .-> u10
   u6 -. include .-> u9
   u7 -. include .-> u9
-  u10 -. include .-> u11
   u13 -. include .-> u18
 
   u10 --- stripe
-  u11 --- antifraude
   u18 --- stripe
 </pre>
         </div>
@@ -532,7 +528,7 @@ flowchart LR
         <caption>UC-06 · Comprar ingresso (evento pago)</caption>
         <tbody>
           <tr><th scope="row">Ator principal</th><td>Participante</td></tr>
-          <tr><th scope="row">Atores de apoio</th><td>Serviço antifraude, Gateway (Stripe), Serviço de notificações</td></tr>
+          <tr><th scope="row">Atores de apoio</th><td>Gateway (Stripe), Serviço de notificações</td></tr>
           <tr><th scope="row">Pré-condições</th><td>Participante autenticado; evento publicado com sessão e tipo de ingresso pago; estoque disponível; política de reembolso aceita.</td></tr>
           <tr><th scope="row">Pós-condição (sucesso)</th><td>Pedido <code>PAGO</code>; Pagamento <code>APROVADO</code>; ingressos <code>EMITIDOS</code> com QR Code; estoque decrementado; repasse registrado; comprovante enviado.</td></tr>
           <tr><th scope="row">Pós-condição (falha)</th><td>Estoque devolvido; Pedido <code>EXPIRADO</code> ou <code>RECUSADO</code>; nenhum valor capturado.</td></tr>
@@ -543,7 +539,6 @@ flowchart LR
               <li>Sistema exibe o resumo: subtotal, taxa de serviço e total.</li>
               <li>Participante informa, opcionalmente, um cupom; sistema valida e recalcula.</li>
               <li>Participante informa o pagamento (Pix ou cartão, com parcelamento quando permitido).</li>
-              <li>Sistema envia a transação ao antifraude e obtém aprovação de risco.</li>
               <li>Sistema cria a intenção de pagamento no gateway e conduz o checkout.</li>
               <li>Gateway confirma o pagamento por webhook.</li>
               <li>Sistema efetiva o Pedido, registra o Pagamento e emite os ingressos com QR Code.</li>
@@ -554,8 +549,7 @@ flowchart LR
             <ul>
               <li><b>2a</b> Estoque insuficiente → indisponibilidade informada; sugere outro tipo/sessão.</li>
               <li><b>4a</b> Cupom inválido/expirado/esgotado → rejeitado; valor original mantido.</li>
-              <li><b>6a</b> Risco reprovado → Pedido <code>RECUSADO</code>; reserva liberada.</li>
-              <li><b>8a</b> Pagamento recusado → reserva liberada automaticamente; Pedido <code>RECUSADO</code>.</li>
+              <li><b>6a</b> Pagamento recusado pelo gateway → reserva liberada automaticamente; Pedido <code>RECUSADO</code>.</li>
               <li><b>*</b> Reserva expira (10 min) → estoque devolvido; Pedido <code>EXPIRADO</code>.</li>
             </ul>
           </td></tr>
@@ -1107,7 +1101,7 @@ erDiagram
       <h2>Diagrama de sequência — compra de ingresso</h2>
       <p class="prose">
         Realização dinâmica do <strong>UC-06</strong>. Mostra a reserva com bloqueio de
-        estoque, a checagem antifraude, o <em>PaymentIntent</em> no Stripe e a confirmação
+        estoque, o <em>PaymentIntent</em> no Stripe e a confirmação
         assíncrona por <em>webhook</em> que efetiva o pedido e emite os ingressos.
       </p>
       <figure>
@@ -1120,7 +1114,6 @@ sequenceDiagram
   participant API as API chezTicket
   participant DOM as Dominio (Reserva/Estoque)
   participant DB as MariaDB
-  participant AF as Antifraude
   participant S as Stripe
 
   P->>W: Seleciona sessao e tipos de ingresso
@@ -1133,8 +1126,6 @@ sequenceDiagram
 
   P->>W: Confirma dados e paga
   W->>API: POST /pedidos (reservaId, cupom?, metodo)
-  API->>AF: avaliarRisco(pedido)
-  AF-->>API: score aprovado
   API->>S: cria PaymentIntent (valor + taxa)
   S-->>W: client_secret
   W->>S: confirma pagamento (Pix / cartao)
@@ -1190,7 +1181,7 @@ stateDiagram-v2
   [*] --> AguardandoPagamento : pedido criado
   AguardandoPagamento --> Pago : webhook succeeded
   AguardandoPagamento --> Expirado : reserva expira
-  AguardandoPagamento --> Recusado : antifraude / gateway nega
+  AguardandoPagamento --> Recusado : gateway recusa o pagamento
   Recusado --> [*]
   Expirado --> [*]
   Pago --> Reembolsado : cancelamento / chargeback

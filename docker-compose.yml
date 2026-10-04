@@ -1,0 +1,64 @@
+name: chezticket
+
+# Sobe todo o ambiente de desenvolvimento com um comando:
+#   cp .env.example .env   &&   docker compose up --build
+#
+#   MariaDB   -> localhost:${DB_HOST_PORT}      (porta interna 3306)
+#   Back-end  -> http://localhost:${BACKEND_HOST_PORT}
+#   Adminer   -> http://localhost:${ADMINER_HOST_PORT}  (cliente web do banco)
+
+services:
+  mariadb:
+    image: mariadb:11.4
+    container_name: chezticket-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-chezticket}
+      MARIADB_USER: ${MARIADB_USER:-chezticket}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-chezticket}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root}
+    ports:
+      - "${DB_HOST_PORT:-8080}:3306"
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  backend:
+    build: ./backend
+    container_name: chezticket-backend
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/${MARIADB_DATABASE:-chezticket}
+      SPRING_DATASOURCE_USERNAME: ${MARIADB_USER:-chezticket}
+      SPRING_DATASOURCE_PASSWORD: ${MARIADB_PASSWORD:-chezticket}
+    ports:
+      - "${BACKEND_HOST_PORT:-8081}:8081"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  adminer:
+    image: adminer:4
+    container_name: chezticket-adminer
+    restart: unless-stopped
+    depends_on:
+      - mariadb
+    environment:
+      ADMINER_DEFAULT_SERVER: mariadb
+    ports:
+      - "${ADMINER_HOST_PORT:-8090}:8080"
+
+volumes:
+  mariadb-data:

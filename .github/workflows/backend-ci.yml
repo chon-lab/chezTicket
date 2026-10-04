@@ -1,0 +1,54 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build e testes (mvnw verify)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      - name: Garantir permissão de execução do mvnw
+        run: chmod +x mvnw
+
+      # verify roda as classes *Test (unitárias) e *IT (Testcontainers) — os
+      # runners ubuntu-latest já têm Docker, então os *IT sobem MariaDB sem
+      # configuração extra.
+      - name: Build e testes completos
+        run: ./mvnw --batch-mode --no-transfer-progress verify
+
+      - name: Publicar relatórios de teste
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorios-de-teste
+          path: |
+            backend/target/surefire-reports/
+            backend/target/failsafe-reports/
+          retention-days: 7
+          if-no-files-found: ignore

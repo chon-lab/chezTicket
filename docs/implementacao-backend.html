@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Back-end do chezTicket</title>
+<meta name="description" content="Status de implementação do back-end do chezTicket: stack, módulos, regras de negócio, modelo de dados e testes." />
+<style>
+  /* Paleta e tipografia compartilhadas com docs/modelagem-uml.html, para as duas
+     peças lerem como o mesmo projeto. Layout: documento de leitura em coluna única,
+     com diagramas Mermaid sobre uma "prancheta" clara fixa (lê bem nos dois temas). */
+  :root {
+    --bg: #f5f6f9;
+    --surface: #ffffff;
+    --surface-2: #eceff4;
+    --ink: #1b1a33;
+    --ink-soft: #52526b;
+    --border: #d7dbe3;
+    --accent: #0c8577;
+    --accent-ink: #0a6b60;
+    --accent-wash: #e4f3f0;
+    --danger: #cc4360;
+    --danger-wash: #fbe7ec;
+    --figure-bg: #fcfcfd;
+    --figure-border: #dfe3ea;
+    --shadow: 0 1px 2px rgba(20, 22, 40, .06), 0 8px 24px -12px rgba(20, 22, 40, .18);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #131327;
+      --surface: #1c1c34;
+      --surface-2: #24243f;
+      --ink: #ececf4;
+      --ink-soft: #a7a7c1;
+      --border: #333350;
+      --accent: #3fd0bd;
+      --accent-ink: #6ee0d2;
+      --accent-wash: #17352f;
+      --danger: #ff8098;
+      --danger-wash: #3a1f28;
+      --figure-bg: #fcfcfd;
+      --figure-border: #c7cdd9;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px -14px rgba(0, 0, 0, .6);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #131327;
+    --surface: #1c1c34;
+    --surface-2: #24243f;
+    --ink: #ececf4;
+    --ink-soft: #a7a7c1;
+    --border: #333350;
+    --accent: #3fd0bd;
+    --accent-ink: #6ee0d2;
+    --accent-wash: #17352f;
+    --danger: #ff8098;
+    --danger-wash: #3a1f28;
+    --figure-bg: #fcfcfd;
+    --figure-border: #c7cdd9;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px -14px rgba(0, 0, 0, .6);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1rem, 4vw, 2.5rem) 5rem;
+  }
+
+  header.masthead {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 1.75rem;
+    margin-bottom: 2.5rem;
+  }
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .74rem;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    margin: 0 0 .9rem;
+  }
+  h1 {
+    font-family: "Fraunces", Georgia, "Times New Roman", serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    font-size: clamp(2rem, 5.2vw, 3rem);
+    line-height: 1.08;
+    letter-spacing: -.01em;
+    text-wrap: balance;
+    margin: 0 0 .75rem;
+  }
+  .lede {
+    font-size: 1.08rem;
+    color: var(--ink-soft);
+    max-width: 68ch;
+    margin: 0 0 1.5rem;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.25rem; }
+  .chip {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .72rem;
+    letter-spacing: .04em;
+    padding: .3rem .6rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--ink-soft);
+    background: var(--surface);
+    white-space: nowrap;
+  }
+  .chip b { color: var(--ink); font-weight: 600; }
+
+  .toggle {
+    position: absolute;
+    top: clamp(1rem, 4vw, 2rem);
+    right: clamp(1rem, 4vw, 2rem);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .78rem;
+    background: var(--surface);
+    color: var(--ink-soft);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .4rem .7rem;
+    cursor: pointer;
+  }
+  .toggle:hover { color: var(--ink); border-color: var(--accent); }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 3rem;
+    box-shadow: var(--shadow);
+  }
+  nav.toc p {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .72rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 .75rem;
+  }
+  nav.toc ol { margin: 0; padding-left: 1.4rem; columns: 2; column-gap: 2.5rem; }
+  nav.toc li { margin: .25rem 0; break-inside: avoid; }
+  nav.toc a { color: var(--ink); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent-ink); text-decoration: underline; }
+
+  main { counter-reset: sec; }
+  section { margin-bottom: 3.5rem; scroll-margin-top: 1.5rem; }
+  h2 {
+    counter-increment: sec;
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 600;
+    font-size: clamp(1.35rem, 3.2vw, 1.75rem);
+    line-height: 1.2;
+    letter-spacing: -.005em;
+    text-wrap: balance;
+    margin: 0 0 1rem;
+    padding-bottom: .5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h2::before {
+    content: counter(sec, decimal-leading-zero);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .78em;
+    color: var(--accent-ink);
+    margin-right: .7rem;
+  }
+  h3 {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-weight: 600;
+    font-size: 1rem;
+    letter-spacing: .01em;
+    margin: 1.75rem 0 .6rem;
+  }
+  p { margin: 0 0 1rem; }
+  .prose { max-width: 70ch; }
+  .prose strong { font-weight: 600; }
+
+  figure { margin: 1.25rem 0 0; }
+  .plate {
+    background: var(--figure-bg);
+    border: 1px solid var(--figure-border);
+    border-radius: 12px;
+    padding: 1.4rem 1rem;
+    overflow-x: auto;
+    box-shadow: var(--shadow);
+  }
+  .plate .mermaid { margin: 0; text-align: center; min-width: 280px; }
+  figcaption {
+    font-size: .86rem;
+    color: var(--ink-soft);
+    margin-top: .7rem;
+    padding-left: .2rem;
+  }
+  figcaption b {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .8rem;
+    letter-spacing: .03em;
+    color: var(--accent-ink);
+    font-weight: 500;
+  }
+
+  .callout {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    background: var(--surface);
+    border-radius: 0 10px 10px 0;
+    padding: 1rem 1.25rem;
+    margin: 1.5rem 0;
+  }
+  .callout.warn { border-left-color: var(--danger); }
+  .callout p:last-child { margin-bottom: 0; }
+
+  table.spec {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .92rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 1rem 0 0;
+  }
+  table.spec caption {
+    caption-side: top;
+    text-align: left;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .76rem;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    padding: 0 0 .5rem;
+  }
+  table.spec th, table.spec td {
+    text-align: left;
+    vertical-align: top;
+    padding: .55rem .8rem;
+    border-bottom: 1px solid var(--border);
+  }
+  table.spec tr:last-child th, table.spec tr:last-child td { border-bottom: none; }
+  table.spec thead th {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .72rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    background: var(--surface-2);
+  }
+  table.spec td code, table.spec th code {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .88em;
+    background: var(--surface-2);
+    padding: .08em .35em;
+    border-radius: 4px;
+  }
+
+  .overflow-x { overflow-x: auto; }
+
+  ul.plain, ol.plain { padding-left: 1.2rem; margin: 1rem 0; }
+  ul.plain li, ol.plain li { margin: .4rem 0; }
+  code, .mono {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .88em;
+    background: var(--surface-2);
+    padding: .08em .35em;
+    border-radius: 4px;
+  }
+  pre.code {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .86rem;
+    line-height: 1.6;
+  }
+
+  a { color: var(--accent-ink); }
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  footer {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    font-size: .82rem;
+    color: var(--ink-soft);
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" />
+</head>
+<body>
+
+<button class="toggle" id="themeToggle" type="button" aria-label="Alternar tema">tema: auto</button>
+
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">chezTicket · Back-end · Status de implementação</p>
+    <h1>Back-end do chezTicket</h1>
+    <p class="lede">
+      O que já está construído, não como modelo, mas como código rodando: stack, módulos,
+      regras de negócio e testes. Companheiro de
+      <a href="modelagem-uml.html">modelagem-uml.html</a>, que descreve o design; este documento
+      descreve a implementação.
+    </p>
+    <div class="chips">
+      <span class="chip"><b>Java</b> 17</span>
+      <span class="chip"><b>Spring Boot</b> 3.3.5</span>
+      <span class="chip"><b>Banco</b> MariaDB 11 + Flyway</span>
+      <span class="chip"><b>Testes</b> 42 automatizados</span>
+      <span class="chip"><b>Atualizado</b> 04/10/2026</span>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Sumário">
+    <p>Sumário</p>
+    <ol>
+      <li><a href="#stack">Stack e como rodar</a></li>
+      <li><a href="#modulos">Módulos implementados</a></li>
+      <li><a href="#regras">Regras de negócio</a></li>
+      <li><a href="#dados-testes">Modelo de dados e testes</a></li>
+      <li><a href="#proximos">Próximos passos</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <!-- 1 -->
+    <section id="stack">
+      <h2>Stack e como rodar</h2>
+      <table class="spec">
+        <tbody>
+          <tr><th scope="row">Linguagem / runtime</th><td>Java 17</td></tr>
+          <tr><th scope="row">Framework</th><td>Spring Boot 3.3.5</td></tr>
+          <tr><th scope="row">Arquitetura</th><td>Hexagonal (Ports &amp; Adapters)</td></tr>
+          <tr><th scope="row">Banco de dados</th><td>MariaDB 11, migrações com Flyway</td></tr>
+          <tr><th scope="row">Containerização</th><td>Docker + Docker Compose (banco, API e Adminer)</td></tr>
+          <tr><th scope="row">Documentação da API</th><td>springdoc-openapi / Swagger UI</td></tr>
+          <tr><th scope="row">Testes</th><td>JUnit 5, Mockito, Testcontainers (MariaDB real)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Subir o ambiente</h3>
+      <pre class="code">cp .env.example .env
+docker compose up --build</pre>
+
+      <table class="spec" style="margin-top:1rem">
+        <tbody>
+          <tr><th scope="row">API</th><td><code>http://localhost:8081</code></td></tr>
+          <tr><th scope="row">Swagger</th><td><code>http://localhost:8081/swagger-ui.html</code></td></tr>
+          <tr><th scope="row">Banco (MariaDB)</th><td><code>localhost:8080</code></td></tr>
+          <tr><th scope="row">Adminer</th><td><code>http://localhost:8090</code></td></tr>
+        </tbody>
+      </table>
+      <p class="prose" style="margin-top:1rem">
+        Variáveis de ambiente, comandos de teste e detalhes de desenvolvimento local:
+        <code>backend/README.md</code>.
+      </p>
+    </section>
+
+    <!-- 2 -->
+    <section id="modulos">
+      <h2>Módulos implementados</h2>
+
+      <h3><code>catalogo/categoria</code> — CRUD completo</h3>
+      <div class="overflow-x">
+      <table class="spec">
+        <thead><tr><th>Método</th><th>Rota</th><th>Ação</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/api/categorias</code></td><td>lista (<code>apenasAtivas=true</code> oculta as desativadas)</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/categorias/{id}</code></td><td>detalha</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/categorias</code></td><td>cadastra</td></tr>
+          <tr><td><code>PUT</code></td><td><code>/api/categorias/{id}</code></td><td>renomeia (slug recalculado)</td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/api/categorias/{id}</code></td><td>remove → <code>204</code>, ou <code>409</code> se houver evento vinculado</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/categorias/{id}/ativacao</code></td><td>reativa</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/categorias/{id}/desativacao</code></td><td>desativa</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3><code>catalogo/evento</code> — CRUD completo + ciclo de vida</h3>
+      <div class="overflow-x">
+      <table class="spec">
+        <thead><tr><th>Método</th><th>Rota</th><th>Ação</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/api/eventos</code></td><td>lista (filtros: <code>status</code>, <code>categoriaId</code>, <code>organizadorId</code>)</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/eventos/{id}</code></td><td>detalha</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/eventos</code></td><td>cria em <code>RASCUNHO</code></td></tr>
+          <tr><td><code>PUT</code></td><td><code>/api/eventos/{id}</code></td><td>atualiza dados (só em <code>RASCUNHO</code> ou <code>PUBLICADO</code>)</td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/api/eventos/{id}</code></td><td>remove — regra de autorização, ver §3</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/eventos/{id}/publicacao</code></td><td><code>RASCUNHO</code> → <code>PUBLICADO</code> (exige descrição)</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/eventos/{id}/cancelamento</code></td><td>qualquer estado não terminal → <code>CANCELADO</code></td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/eventos/{id}/encerramento</code></td><td><code>PUBLICADO</code>/<code>ESGOTADO</code> → <code>ENCERRADO</code></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <figure>
+        <div class="plate">
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> RASCUNHO
+  RASCUNHO --> PUBLICADO : publicar (exige descricao)
+  PUBLICADO --> ESGOTADO
+  PUBLICADO --> ENCERRADO : encerrar
+  ESGOTADO --> ENCERRADO : encerrar
+  RASCUNHO --> CANCELADO : cancelar
+  PUBLICADO --> CANCELADO : cancelar
+  ESGOTADO --> CANCELADO : cancelar
+  ENCERRADO --> [*]
+  CANCELADO --> [*]
+</pre>
+        </div>
+        <figcaption><b>Figura 1</b> — Ciclo de vida do evento, implementado em <code>Evento.publicar()/cancelar()/encerrar()</code>.</figcaption>
+      </figure>
+
+      <p class="prose" style="margin-top:1rem">
+        Só <code>categoria</code> e <code>evento</code> têm mapeamento JPA até agora — as demais
+        tabelas do schema (§4) existem para fechar o modelo físico da Etapa 1, mas ainda não têm
+        código Java por cima.
+      </p>
+    </section>
+
+    <!-- 3 -->
+    <section id="regras">
+      <h2>Regras de negócio implementadas</h2>
+      <ul class="plain">
+        <li><strong>Defaults de criação</strong>: categoria nova recebe slug derivado do nome;
+          evento novo sem classificação/política informada recebe <code>LIVRE</code>/<code>PADRAO</code>.</li>
+        <li><strong>Unicidade</strong>: nome de categoria é único, no cadastro e na renomeação.</li>
+        <li><strong>Edição bloqueada por status</strong>: evento <code>CANCELADO</code>/<code>ENCERRADO</code>
+          não aceita <code>PUT</code>.</li>
+        <li><strong>Publicar exige descrição preenchida</strong> (regra ligada ao UC-06 da modelagem).</li>
+        <li><strong>Remoção de evento — só ADMIN quando publicado</strong>: em <code>RASCUNHO</code>
+          qualquer um remove; em qualquer outro status, só administrador.</li>
+        <li><strong>Remoção bloqueada por integridade referencial</strong>: remover uma categoria
+          com evento vinculado (ou qualquer remoção que violaria uma chave estrangeira) retorna
+          <code>409</code></li>
+      </ul>
+      <p class="prose">
+        Erros seguem RFC 7807 (<code>application/problem+json</code>): <code>400</code> payload
+        malformado, <code>403</code> sem permissão, <code>404</code> inexistente, <code>409</code>
+        conflito, <code>422</code> regra de negócio violada.
+      </p>
+    </section>
+
+    <!-- 4 -->
+    <section id="dados-testes">
+      <h2>Modelo de dados e testes</h2>
+      <p class="prose">
+        Duas perguntas sustentam qualquer sistema em construção: onde os dados moram, e como
+        saber que o que já foi feito continua funcionando à medida que o projeto cresce. Esta
+        seção responde as duas — o banco implementado, e os testes automatizados que o protegem.
+      </p>
+
+      <h3>Modelo de dados</h3>
+      <p class="prose">
+        O banco precisa de uma estrutura fixa — tabelas, colunas, relações — para guardar
+        organizador, evento, categoria e o resto. Essa estrutura também precisa evoluir de forma
+        controlada, e não por alguém alterando o banco na mão. É isso que o Flyway garante: cada
+        mudança de schema é um arquivo numerado, aplicado sozinho e na ordem certa toda vez que a
+        aplicação sobe.
+      </p>
+      <p class="prose">
+        Hoje o schema tem <strong>17 tabelas</strong>, derivadas do modelo lógico da modelagem UML
+        (sem <code>setor</code>/<code>lote</code>/<code>checkin</code>, removidos do modelo depois
+        da primeira versão):
+      </p>
+      <pre class="code">usuario, participante, organizador, administrador,
+categoria, local, evento, sessao, tipo_ingresso, cupom,
+reserva, pedido, item_pedido, pagamento, reembolso, ingresso, repasse_financeiro</pre>
+
+      <table class="spec" style="margin-top:1.25rem">
+        <caption>Migrações</caption>
+        <tbody>
+          <tr><th scope="row"><code>V1</code></th><td>esquema inicial — as 17 tabelas</td></tr>
+          <tr><th scope="row"><code>V2</code></th><td>seed de 8 categorias iniciais</td></tr>
+          <tr><th scope="row"><code>V3</code></th><td>dados de demonstração: 2 organizadores, 1
+            administrador (<code>usuario_id=3</code>), 2 locais — testa o CRUD pelo Swagger sem
+            cadastrar nada antes</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Testes automatizados</h3>
+      <p class="prose">
+        Testar na mão — subir o Docker, chamar cada endpoint pelo Swagger — prova que algo
+        funcionou <em>uma vez</em>, não que vai continuar funcionando depois da próxima mudança.
+        Por isso cada regra importante virou um teste automatizado: um programa curto que exercita
+        aquela regra sozinho e avisa, em segundos, se algo quebrar.
+      </p>
+      <p class="prose">Foram realizados testes em três camadas, cada uma isolando uma
+        preocupação diferente. Um exemplo real de cada:</p>
+
+      <div class="overflow-x">
+      <table class="spec">
+        <thead><tr><th>Camada</th><th>Isola</th><th>Exemplo real</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Domínio<br><code>CategoriaTest</code>, <code>EventoTest</code></td>
+            <td>a regra de negócio pura, sem Spring — roda em milissegundos</td>
+            <td><code>naoDevePublicarSemDescricao()</code></td>
+          </tr>
+          <tr>
+            <td>Aplicação<br><code>CategoriaServiceTest</code>, <code>EventoServiceTest</code></td>
+            <td>a orquestração do caso de uso, com Mockito simulando o banco</td>
+            <td><code>administradorRemoveEventoPublicado()</code></td>
+          </tr>
+          <tr>
+            <td>Persistência<br><code>*PersistenceAdapterIT</code></td>
+            <td>contra um MariaDB real em Docker (Testcontainers), Flyway rodando de verdade</td>
+            <td><code>deveFiltrarPorStatusCategoriaEOrganizador()</code></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="prose" style="margin-top:1rem">
+        <code>mvn test</code> roda as duas primeiras camadas (rápido, sem precisar de Docker);
+        <code>mvn verify</code> — com o Failsafe agora configurado — roda tudo, <code>*IT</code>
+        incluído:
+      </p>
+      <pre class="code">mvn test     # dominio + aplicacao — rapido, sem Docker
+mvn verify   # tudo, incluindo os *IT — requer Docker</pre>
+    </section>
+
+    <!-- 5 -->
+    <section id="proximos">
+      <h2>Próximos passos — Módulo de Ingressos</h2>
+      <ol class="plain">
+        <li>Tipos de ingresso (<code>TipoIngresso</code>).</li>
+        <li>Entrega da última proposta do Figma.</li>
+        <li>Controle de estoque e disponibilidade.</li>
+        <li>Melhorias do sistema atual, quando necessário.</li>
+      </ol>
+    </section>
+  </main>
+
+  <footer>
+    chezTicket · status de implementação do back-end · atualizado em 04/10/2026 ·
+    companheiro de <a href="modelagem-uml.html">modelagem-uml.html</a>.
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  window.addEventListener("DOMContentLoaded", function () {
+    if (window.mermaid) {
+      mermaid.initialize({
+        startOnLoad: true,
+        securityLevel: "loose",
+        theme: "default",
+        flowchart: { useMaxWidth: true, htmlLabels: true },
+        themeVariables: { fontFamily: "IBM Plex Sans, sans-serif" }
+      });
+    }
+
+    var btn = document.getElementById("themeToggle");
+    var root = document.documentElement;
+    var order = ["auto", "light", "dark"];
+    var stored;
+    try { stored = localStorage.getItem("chezticket-theme"); } catch (e) { stored = null; }
+    var current = order.indexOf(stored) > -1 ? stored : "auto";
+
+    function apply(mode) {
+      if (mode === "auto") root.removeAttribute("data-theme");
+      else root.setAttribute("data-theme", mode);
+      btn.textContent = "tema: " + mode;
+      try { localStorage.setItem("chezticket-theme", mode); } catch (e) {}
+    }
+    apply(current);
+
+    btn.addEventListener("click", function () {
+      current = order[(order.indexOf(current) + 1) % order.length];
+      apply(current);
+    });
+  });
+</script>
+</body>
+</html>
