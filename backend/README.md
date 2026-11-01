@@ -52,6 +52,17 @@ curl "http://localhost:8081/api/eventos?status=PUBLICADO"
 curl -X POST http://localhost:8081/api/categorias -H "Content-Type: application/json" -d '{"nome":"Feira de Games"}'
 curl -X PUT http://localhost:8081/api/categorias/9 -H "Content-Type: application/json" -d '{"nome":"Feira de Jogos"}'
 curl -X POST http://localhost:8081/api/categorias/9/desativacao
+
+# Fluxo completo do Módulo de Ingressos: sessão (local 1 do seed) -> tipo de ingresso -> reserva
+curl -X POST http://localhost:8081/api/sessoes -H "Content-Type: application/json" \
+     -d '{"eventoId":1,"localId":1,"inicio":"2026-12-05T19:00:00","fim":"2026-12-05T22:00:00"}'
+
+curl -X POST http://localhost:8081/api/tipos-ingresso -H "Content-Type: application/json" \
+     -d '{"sessaoId":1,"nome":"Inteira","gratuito":false,"preco":100.00,"taxaServico":10.00,"quantidadeTotal":200,"limitePorCompra":5}'
+
+# participanteId 4 vem do seed de demonstração (V4)
+curl -X POST http://localhost:8081/api/reservas -H "Content-Type: application/json" \
+     -d '{"participanteId":4,"itens":[{"tipoIngressoId":1,"quantidade":2}]}'
 ```
 
 ## Endpoints
@@ -94,6 +105,51 @@ curl -X DELETE http://localhost:8081/api/eventos/2
 curl -X DELETE http://localhost:8081/api/eventos/2 -H "X-Usuario-Id: 3"
 # -> 204 (usuário 3 é administrador no seed de demonstração)
 ```
+
+### Local — `/api/locais`
+
+| Método | Rota | Ação |
+|--------|------|------|
+| `GET`    | `/` | lista |
+| `GET`    | `/{id}` | detalha |
+| `POST`   | `/` | cadastra |
+| `PUT`    | `/{id}` | atualiza dados |
+| `DELETE` | `/{id}` | remove → `204`, ou `409` se houver sessão vinculada |
+
+### Sessão — `/api/sessoes`
+
+| Método | Rota | Ação |
+|--------|------|------|
+| `GET`    | `/` | lista (filtros: `?eventoId=`, `?status=`) |
+| `GET`    | `/{id}` | detalha |
+| `POST`   | `/` | agenda (evento e local precisam existir) |
+| `PUT`    | `/{id}` | reagenda local/horário (só em `AGENDADA`) |
+| `DELETE` | `/{id}` | remove (só em `AGENDADA`) |
+| `POST`   | `/{id}/inicio` | `AGENDADA` → `EM_ANDAMENTO` |
+| `POST`   | `/{id}/encerramento` | `EM_ANDAMENTO` → `ENCERRADA` |
+| `POST`   | `/{id}/cancelamento` | `AGENDADA`/`EM_ANDAMENTO` → `CANCELADA` |
+
+### Tipo de ingresso — `/api/tipos-ingresso`
+
+| Método | Rota | Ação |
+|--------|------|------|
+| `GET`    | `/?sessaoId=` | lista os tipos de uma sessão |
+| `GET`    | `/{id}` | detalha (inclui `quantidadeDisponivel`) |
+| `POST`   | `/` | cadastra (`gratuito:true` zera preço/taxa) |
+| `PUT`    | `/{id}` | atualiza (quantidade total não pode ficar abaixo da vendida) |
+| `DELETE` | `/{id}` | remove (só sem nenhuma unidade vendida/reservada) |
+
+### Reserva — `/api/reservas`
+
+| Método | Rota | Ação |
+|--------|------|------|
+| `GET`    | `/?participanteId=` | lista as reservas de um participante |
+| `GET`    | `/{id}` | detalha |
+| `POST`   | `/` | reserva um ou mais tipos de ingresso → `409` se faltar estoque |
+| `POST`   | `/{id}/cancelamento` | cancela e libera o estoque na hora |
+
+Reserva fica `ATIVA` por 10 minutos (constante no `ReservaService`); depois disso, um
+`@Scheduled` interno expira e libera o estoque automaticamente — não precisa chamar nada.
 
 ## Rodar sem Docker
 

@@ -6,6 +6,7 @@ import com.chezticket.shared.domain.RegraDeNegocioException;
 import com.chezticket.shared.domain.AcessoNegadoException;
 import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -71,5 +72,15 @@ class ApiExceptionHandler {
     ProblemDetail integridadeReferencial(DataIntegrityViolationException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
                 "Não é possível concluir a operação: o registro está em uso por outro recurso.");
+    }
+
+    /**
+     * Duas requisições concorrentes tentaram alterar o mesmo registro versionado
+     * (ex.: dois pedidos de reserva disputando o estoque do mesmo tipo de ingresso).
+     */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    ProblemDetail concorrencia(OptimisticLockingFailureException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
+                "O registro foi alterado por outra requisição simultânea. Tente novamente.");
     }
 }

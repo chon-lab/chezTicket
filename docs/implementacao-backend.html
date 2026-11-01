@@ -331,7 +331,7 @@
       <span class="chip"><b>Java</b> 17</span>
       <span class="chip"><b>Spring Boot</b> 3.3.5</span>
       <span class="chip"><b>Banco</b> MariaDB 11 + Flyway</span>
-      <span class="chip"><b>Atualizado</b> 06/10/2026</span>
+      <span class="chip"><b>Atualizado</b> 01/11/2026</span>
     </div>
   </header>
 
@@ -436,6 +436,82 @@ stateDiagram-v2
         <figcaption><b>Figura 1</b> — Ciclo de vida do evento, implementado em <code>Evento.publicar()/cancelar()/encerrar()</code>.</figcaption>
       </figure>
 
+      <h3><code>catalogo/local</code> — CRUD completo</h3>
+      <div class="overflow-x">
+      <table class="spec">
+        <thead><tr><th>Método</th><th>Rota</th><th>Ação</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/api/locais</code></td><td>lista</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/locais/{id}</code></td><td>detalha</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/locais</code></td><td>cadastra</td></tr>
+          <tr><td><code>PUT</code></td><td><code>/api/locais/{id}</code></td><td>atualiza dados</td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/api/locais/{id}</code></td><td>remove → <code>204</code>, ou <code>409</code> se houver sessão vinculada</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3><code>catalogo/sessao</code> — CRUD completo + ciclo de vida</h3>
+      <p class="prose">
+        Uma sessão é a ocorrência de um evento num local e horário (Figura 2 da modelagem):
+        um evento pode ter várias sessões, e é na sessão que os tipos de ingresso são vendidos.
+      </p>
+      <div class="overflow-x">
+      <table class="spec">
+        <thead><tr><th>Método</th><th>Rota</th><th>Ação</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/api/sessoes</code></td><td>lista (filtros: <code>eventoId</code>, <code>status</code>)</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/sessoes/{id}</code></td><td>detalha</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/sessoes</code></td><td>agenda (valida evento e local existentes)</td></tr>
+          <tr><td><code>PUT</code></td><td><code>/api/sessoes/{id}</code></td><td>reagenda local/horário (só em <code>AGENDADA</code>)</td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/api/sessoes/{id}</code></td><td>remove (só em <code>AGENDADA</code>)</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/sessoes/{id}/inicio</code></td><td><code>AGENDADA</code> → <code>EM_ANDAMENTO</code></td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/sessoes/{id}/encerramento</code></td><td><code>EM_ANDAMENTO</code> → <code>ENCERRADA</code></td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/sessoes/{id}/cancelamento</code></td><td><code>AGENDADA</code>/<code>EM_ANDAMENTO</code> → <code>CANCELADA</code></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3><code>catalogo/ingresso</code> — tipos de ingresso + controle de estoque</h3>
+      <p class="prose">
+        Fecha a Fase 4 do cronograma: tipos de ingresso (gratuito/pago), com estoque controlado
+        por <strong>bloqueio otimista</strong> (<code>@Version</code> em <code>tipo_ingresso</code>) —
+        duas reservas simultâneas do mesmo tipo nunca sobrevendem; a segunda recebe <code>409</code>
+        e tenta de novo.
+      </p>
+      <div class="overflow-x">
+      <table class="spec">
+        <thead><tr><th>Método</th><th>Rota</th><th>Ação</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/api/tipos-ingresso?sessaoId=</code></td><td>lista os tipos de uma sessão</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/tipos-ingresso/{id}</code></td><td>detalha (inclui <code>quantidadeDisponivel</code>)</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/tipos-ingresso</code></td><td>cadastra (gratuito zera preço/taxa automaticamente)</td></tr>
+          <tr><td><code>PUT</code></td><td><code>/api/tipos-ingresso/{id}</code></td><td>atualiza (quantidade total não pode ficar abaixo da já vendida)</td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/api/tipos-ingresso/{id}</code></td><td>remove (só sem nenhuma unidade vendida/reservada)</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3><code>vendas/reserva</code> — seleção e retenção temporária de ingressos</h3>
+      <p class="prose">
+        O participante escolhe quantidade por tipo de ingresso e o sistema retém esse estoque por
+        10 minutos (<code>ReservaService.DURACAO_DA_RESERVA</code>). Se a reserva não virar pedido
+        até lá — módulo de Pedido/Pagamento é Fase 5, Stripe — ela expira sozinha: um
+        <code>@Scheduled</code> varre reservas vencidas a cada minuto e libera o estoque retido.
+        Participante é checado pela tabela <code>participante</code> (sem autenticação ainda — use o
+        <code>participanteId=4</code> do seed de demonstração, V4).
+      </p>
+      <div class="overflow-x">
+      <table class="spec">
+        <thead><tr><th>Método</th><th>Rota</th><th>Ação</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/api/reservas?participanteId=</code></td><td>lista as reservas de um participante</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/reservas/{id}</code></td><td>detalha</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/reservas</code></td><td>reserva um ou mais tipos de ingresso → <code>409</code> se faltar estoque</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/reservas/{id}/cancelamento</code></td><td>cancela e libera o estoque na hora</td></tr>
+        </tbody>
+      </table>
+      </div>
+
     </section>
 
     <!-- 3 -->
@@ -453,6 +529,16 @@ stateDiagram-v2
         <li><strong>Remoção bloqueada por integridade referencial</strong>: remover uma categoria
           com evento vinculado (ou qualquer remoção que violaria uma chave estrangeira) retorna
           <code>409</code></li>
+        <li><strong>Sessão só reagenda/remove enquanto <code>AGENDADA</code></strong>: depois de
+          iniciada, só resta <code>/encerramento</code> ou <code>/cancelamento</code>.</li>
+        <li><strong>Tipo de ingresso gratuito zera preço e taxa</strong>, mesmo que o request
+          informe outro valor — evita estado inconsistente (gratuito com preço).</li>
+        <li><strong>Estoque nunca sobrevende</strong>: <code>reservarUnidades()</code> checa limite
+          por compra e disponibilidade; concorrência real é pega por bloqueio otimista
+          (<code>@Version</code>), não só pela checagem em memória.</li>
+        <li><strong>Reserva expira sozinha</strong>: 10 minutos sem virar pedido, e o
+          <code>@Scheduled</code> devolve o estoque — participante não fica com ingresso "preso"
+          numa aba esquecida.</li>
       </ul>
       <p class="prose">
         Erros seguem RFC 7807 (<code>application/problem+json</code>): <code>400</code> payload
@@ -479,22 +565,27 @@ stateDiagram-v2
         aplicação sobe.
       </p>
       <p class="prose">
-        Hoje o schema tem <strong>17 tabelas</strong>, derivadas do modelo lógico da modelagem UML
-        (sem <code>setor</code>/<code>lote</code>/<code>checkin</code>, removidos do modelo depois
-        da primeira versão):
+        O schema tem <strong>18 tabelas</strong>: as 17 originais da modelagem UML (sem
+        <code>setor</code>/<code>lote</code>/<code>checkin</code>, removidos do modelo depois da
+        primeira versão) mais <code>item_reserva</code>, acrescentada em V4 para guardar os itens de
+        cada reserva (a modelagem original não detalhava essa relação):
       </p>
       <pre class="code">usuario, participante, organizador, administrador,
 categoria, local, evento, sessao, tipo_ingresso, cupom,
-reserva, pedido, item_pedido, pagamento, reembolso, ingresso, repasse_financeiro</pre>
+reserva, item_reserva, pedido, item_pedido, pagamento, reembolso, ingresso, repasse_financeiro</pre>
 
       <table class="spec" style="margin-top:1.25rem">
         <caption>Migrações</caption>
         <tbody>
-          <tr><th scope="row"><code>V1</code></th><td>esquema inicial — as 17 tabelas</td></tr>
+          <tr><th scope="row"><code>V1</code></th><td>esquema inicial — as 17 tabelas originais</td></tr>
           <tr><th scope="row"><code>V2</code></th><td>seed de 8 categorias iniciais</td></tr>
           <tr><th scope="row"><code>V3</code></th><td>dados de demonstração: 2 organizadores, 1
             administrador (<code>usuario_id=3</code>), 2 locais — testa o CRUD pelo Swagger sem
             cadastrar nada antes</td></tr>
+          <tr><th scope="row"><code>V4</code></th><td>Módulo de Ingressos: coluna <code>versao</code>
+            em <code>tipo_ingresso</code> (bloqueio otimista), tabela <code>item_reserva</code>, e um
+            participante de demonstração (<code>usuario_id=4</code>) para testar <code>/api/reservas</code>
+            pelo Swagger</td></tr>
         </tbody>
       </table>
 
@@ -513,19 +604,22 @@ reserva, pedido, item_pedido, pagamento, reembolso, ingresso, repasse_financeiro
         <thead><tr><th>Camada</th><th>Isola</th><th>Exemplo real</th></tr></thead>
         <tbody>
           <tr>
-            <td>Domínio<br><code>CategoriaTest</code>, <code>EventoTest</code></td>
+            <td>Domínio<br><code>CategoriaTest</code>, <code>EventoTest</code>, <code>LocalTest</code>,
+              <code>SessaoTest</code>, <code>TipoIngressoTest</code>, <code>ReservaTest</code></td>
             <td>a regra de negócio pura, sem Spring — roda em milissegundos</td>
-            <td><code>naoDevePublicarSemDescricao()</code></td>
+            <td><code>naoDeveReservarAcimaDoLimitePorCompra()</code></td>
           </tr>
           <tr>
-            <td>Aplicação<br><code>CategoriaServiceTest</code>, <code>EventoServiceTest</code></td>
+            <td>Aplicação<br><code>CategoriaServiceTest</code>, <code>EventoServiceTest</code>,
+              <code>LocalServiceTest</code>, <code>SessaoServiceTest</code>,
+              <code>TipoIngressoServiceTest</code>, <code>ReservaServiceTest</code></td>
             <td>a orquestração do caso de uso, com Mockito simulando o banco</td>
-            <td><code>administradorRemoveEventoPublicado()</code></td>
+            <td><code>deveExpirarReservasVencidasELiberarEstoque()</code></td>
           </tr>
           <tr>
             <td>Persistência<br><code>*PersistenceAdapterIT</code></td>
             <td>contra um MariaDB real em Docker (Testcontainers), Flyway rodando de verdade</td>
-            <td><code>deveFiltrarPorStatusCategoriaEOrganizador()</code></td>
+            <td><code>duasAtualizacoesConcorrentesDaMesmaVersaoDevemFalharNaSegunda()</code></td>
           </tr>
         </tbody>
       </table>
@@ -541,13 +635,21 @@ mvn verify   # tudo, incluindo os *IT — requer Docker</pre>
 
     <!-- 5 -->
     <section id="proximos">
-      <h2>Próximos passos — Módulo de Ingressos</h2>
+      <h2>Próximos passos — Fase 5: Integração de Pagamentos (Stripe)</h2>
+      <p class="prose">
+        Módulo de Ingressos (Fase 4 do cronograma) concluído: <code>Local</code>, <code>Sessao</code>,
+        <code>TipoIngresso</code> e o fluxo de reserva (<code>vendas/reserva</code>). O que falta é
+        justamente o que a Fase 5 descreve:
+      </p>
       <ol class="plain">
-        <li>Tipos de ingresso (<code>TipoIngresso</code>).</li>
-        <li>Entrega da última proposta do Figma.</li>
-        <li>Controle de estoque e disponibilidade.</li>
-        <li>Melhorias do sistema atual, quando necessário.</li>
+        <li><code>Pedido</code>/<code>ItemPedido</code>: converte uma <code>Reserva</code> ATIVA em
+          pedido (hoje a reserva só expira ou é cancelada — não existe o próximo passo da compra).</li>
+        <li>Integração com Stripe (checkout e webhooks) e emissão de ingresso/QR Code após
+          confirmação de pagamento.</li>
+        <li>Tratamento de falhas, estornos e reembolsos.</li>
+        <li>Fluxo de inscrição para eventos gratuitos (sem pagamento, só emissão direta).</li>
       </ol>
+      <p class="prose">Fora do backend: front-end (React) ainda não iniciado.</p>
     </section>
   </main>
 
