@@ -3,7 +3,11 @@ package com.chezticket.catalogo.evento.domain;
 import com.chezticket.catalogo.evento.domain.exception.EventoInvalidoException;
 import com.chezticket.catalogo.evento.domain.exception.TransicaoDeStatusInvalidaException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -27,6 +31,9 @@ public class Evento {
     private String descricao;
     private ClassificacaoEtaria classificacaoEtaria;
     private String imagemCapa;
+    private String imagemDivulgacao;
+    private final List<String> tags;
+    private final Map<String, String> redesSociais;
     private StatusEvento status;
     private PoliticaReembolso politicaReembolso;
     private LocalDateTime dataPublicacao;
@@ -34,7 +41,8 @@ public class Evento {
     private LocalDateTime atualizadoEm;
 
     private Evento(Long id, Long organizadorId, Long categoriaId, String titulo, String descricao,
-            ClassificacaoEtaria classificacaoEtaria, String imagemCapa, StatusEvento status,
+            ClassificacaoEtaria classificacaoEtaria, String imagemCapa, String imagemDivulgacao,
+            List<String> tags, Map<String, String> redesSociais, StatusEvento status,
             PoliticaReembolso politicaReembolso, LocalDateTime dataPublicacao,
             LocalDateTime criadoEm, LocalDateTime atualizadoEm) {
         this.id = id;
@@ -44,6 +52,9 @@ public class Evento {
         this.descricao = descricao;
         this.classificacaoEtaria = classificacaoEtaria;
         this.imagemCapa = imagemCapa;
+        this.imagemDivulgacao = imagemDivulgacao;
+        this.tags = normalizarTags(tags);
+        this.redesSociais = normalizarRedesSociais(redesSociais);
         this.status = status;
         this.politicaReembolso = politicaReembolso;
         this.dataPublicacao = dataPublicacao;
@@ -54,6 +65,13 @@ public class Evento {
     /** Cria um evento novo em RASCUNHO. */
     public static Evento criarRascunho(Long organizadorId, Long categoriaId, String titulo, String descricao,
             ClassificacaoEtaria classificacaoEtaria, String imagemCapa, PoliticaReembolso politicaReembolso) {
+        return criarRascunho(organizadorId, categoriaId, titulo, descricao, classificacaoEtaria, imagemCapa,
+                null, List.of(), Map.of(), politicaReembolso);
+    }
+
+    public static Evento criarRascunho(Long organizadorId, Long categoriaId, String titulo, String descricao,
+            ClassificacaoEtaria classificacaoEtaria, String imagemCapa, String imagemDivulgacao,
+            List<String> tags, Map<String, String> redesSociais, PoliticaReembolso politicaReembolso) {
         exigir(organizadorId != null, "O organizador do evento é obrigatório.");
         exigir(categoriaId != null, "A categoria do evento é obrigatória.");
         LocalDateTime agora = LocalDateTime.now();
@@ -65,6 +83,9 @@ public class Evento {
                 normalizar(descricao),
                 classificacaoEtaria != null ? classificacaoEtaria : ClassificacaoEtaria.LIVRE,
                 normalizar(imagemCapa),
+                normalizar(imagemDivulgacao),
+                tags,
+                redesSociais,
                 StatusEvento.RASCUNHO,
                 politicaReembolso != null ? politicaReembolso : PoliticaReembolso.PADRAO,
                 null,
@@ -77,6 +98,15 @@ public class Evento {
             String descricao, ClassificacaoEtaria classificacaoEtaria, String imagemCapa, StatusEvento status,
             PoliticaReembolso politicaReembolso, LocalDateTime dataPublicacao, LocalDateTime criadoEm,
             LocalDateTime atualizadoEm) {
+        return reconstituir(id, organizadorId, categoriaId, titulo, descricao, classificacaoEtaria, imagemCapa,
+                null, List.of(), Map.of(), status, politicaReembolso, dataPublicacao, criadoEm, atualizadoEm);
+    }
+
+    public static Evento reconstituir(Long id, Long organizadorId, Long categoriaId, String titulo,
+            String descricao, ClassificacaoEtaria classificacaoEtaria, String imagemCapa,
+            String imagemDivulgacao, List<String> tags, Map<String, String> redesSociais, StatusEvento status,
+            PoliticaReembolso politicaReembolso, LocalDateTime dataPublicacao, LocalDateTime criadoEm,
+            LocalDateTime atualizadoEm) {
         return new Evento(
                 Objects.requireNonNull(id, "id"),
                 Objects.requireNonNull(organizadorId, "organizadorId"),
@@ -85,6 +115,9 @@ public class Evento {
                 descricao,
                 classificacaoEtaria,
                 imagemCapa,
+                imagemDivulgacao,
+                tags,
+                redesSociais,
                 Objects.requireNonNull(status, "status"),
                 politicaReembolso,
                 dataPublicacao,
@@ -162,6 +195,31 @@ public class Evento {
         return limpo.isEmpty() ? null : limpo;
     }
 
+    private static List<String> normalizarTags(List<String> tags) {
+        if (tags == null || tags.isEmpty()) {
+            return List.of();
+        }
+        return tags.stream()
+                .filter(Objects::nonNull)
+                .map(String::strip)
+                .filter(tag -> !tag.isEmpty())
+                .distinct()
+                .toList();
+    }
+
+    private static Map<String, String> normalizarRedesSociais(Map<String, String> redesSociais) {
+        if (redesSociais == null || redesSociais.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, String> links = new LinkedHashMap<>();
+        redesSociais.forEach((rede, url) -> {
+            if (rede != null && url != null && !url.isBlank()) {
+                links.put(rede, url.strip());
+            }
+        });
+        return Map.copyOf(links);
+    }
+
     private static void exigir(boolean condicao, String mensagem) {
         if (!condicao) {
             throw new EventoInvalidoException(mensagem);
@@ -197,6 +255,18 @@ public class Evento {
 
     public String imagemCapa() {
         return imagemCapa;
+    }
+
+    public String imagemDivulgacao() {
+        return imagemDivulgacao;
+    }
+
+    public List<String> tags() {
+        return tags;
+    }
+
+    public Map<String, String> redesSociais() {
+        return redesSociais;
     }
 
     public StatusEvento status() {

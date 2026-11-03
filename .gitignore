@@ -30,6 +30,9 @@ yarn-error.log*
 .env.*.local
 .env.local
 
+# Uploads armazenados localmente pelo backend
+uploads/
+
 # IDEs
 .idea/
 *.iml

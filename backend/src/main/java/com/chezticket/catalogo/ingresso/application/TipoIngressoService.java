@@ -44,7 +44,9 @@ public class TipoIngressoService implements
                 comando.preco(),
                 comando.taxaServico(),
                 comando.quantidadeTotal(),
-                comando.limitePorCompra());
+                comando.limitePorCompra(),
+                comando.inicioVendas(),
+                comando.fimVendas());
         return repositorio.salvar(tipoIngresso);
     }
 

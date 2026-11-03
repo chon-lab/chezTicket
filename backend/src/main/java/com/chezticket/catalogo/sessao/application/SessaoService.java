@@ -42,8 +42,13 @@ public class SessaoService implements
     @Override
     public Sessao agendar(NovaSessao comando) {
         exigirEventoExistente(comando.eventoId());
-        exigirLocalExistente(comando.localId());
-        Sessao sessao = Sessao.agendar(comando.eventoId(), comando.localId(), comando.inicio(), comando.fim());
+        if (comando.localId() != null) {
+            exigirLocalExistente(comando.localId());
+        }
+        Sessao sessao = comando.localId() != null
+                ? Sessao.agendar(comando.eventoId(), comando.localId(), comando.inicio(), comando.fim())
+                : Sessao.agendarComEndereco(
+                        comando.eventoId(), comando.endereco(), comando.inicio(), comando.fim());
         return repositorio.salvar(sessao);
     }
 

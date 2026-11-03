@@ -40,8 +40,11 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/${MARIADB_DATABASE:-chezticket}
       SPRING_DATASOURCE_USERNAME: ${MARIADB_USER:-chezticket}
       SPRING_DATASOURCE_PASSWORD: ${MARIADB_PASSWORD:-chezticket}
+      CHEZTICKET_UPLOAD_DIR: /app/uploads
     ports:
       - "${BACKEND_HOST_PORT:-8081}:8081"
+    volumes:
+      - ./uploads:/app/uploads
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health"]
       interval: 15s
