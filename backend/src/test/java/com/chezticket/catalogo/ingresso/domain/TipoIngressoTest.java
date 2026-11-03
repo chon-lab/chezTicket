@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.chezticket.catalogo.ingresso.domain.exception.EstoqueInsuficienteException;
 import com.chezticket.catalogo.ingresso.domain.exception.TipoIngressoInvalidoException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 
 class TipoIngressoTest {
@@ -49,6 +50,20 @@ class TipoIngressoTest {
     @Test
     void naoDeveCriarComLimitePorCompraMaiorQueQuantidadeTotal() {
         assertThatThrownBy(() -> TipoIngresso.criar(1L, "Inteira", true, null, null, 10, 20))
+                .isInstanceOf(TipoIngressoInvalidoException.class);
+    }
+
+    @Test
+    void persistePeriodoDeVendasERejeitaDatasInvertidas() {
+        LocalDate inicio = LocalDate.now().plusDays(1);
+        LocalDate fim = inicio.plusDays(10);
+        TipoIngresso tipo = TipoIngresso.criar(
+                1L, "Inteira", false, new BigDecimal("100.00"), BigDecimal.ZERO, 50, 5, inicio, fim);
+
+        assertThat(tipo.inicioVendas()).isEqualTo(inicio);
+        assertThat(tipo.fimVendas()).isEqualTo(fim);
+        assertThatThrownBy(() -> TipoIngresso.criar(
+                1L, "Inteira", false, new BigDecimal("100.00"), BigDecimal.ZERO, 50, 5, fim, inicio))
                 .isInstanceOf(TipoIngressoInvalidoException.class);
     }
 

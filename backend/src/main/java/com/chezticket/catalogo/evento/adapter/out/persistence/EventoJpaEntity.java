@@ -4,14 +4,23 @@ import com.chezticket.catalogo.evento.domain.ClassificacaoEtaria;
 import com.chezticket.catalogo.evento.domain.PoliticaReembolso;
 import com.chezticket.catalogo.evento.domain.StatusEvento;
 import jakarta.persistence.Column;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.MapKeyColumn;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "evento")
@@ -40,6 +49,20 @@ class EventoJpaEntity {
     @Column(name = "imagem_capa", length = 255)
     private String imagemCapa;
 
+    @Column(name = "imagem_divulgacao", length = 255)
+    private String imagemDivulgacao;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "evento_tag", joinColumns = @JoinColumn(name = "evento_id"))
+    @Column(name = "tag", nullable = false, length = 80)
+    private List<String> tags = new ArrayList<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "evento_rede_social", joinColumns = @JoinColumn(name = "evento_id"))
+    @MapKeyColumn(name = "rede", nullable = false, length = 20)
+    @Column(name = "url", nullable = false, length = 2048)
+    private Map<String, String> redesSociais = new LinkedHashMap<>();
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private StatusEvento status;
@@ -61,7 +84,8 @@ class EventoJpaEntity {
     }
 
     EventoJpaEntity(Long id, Long organizadorId, Long categoriaId, String titulo, String descricao,
-            ClassificacaoEtaria classificacaoEtaria, String imagemCapa, StatusEvento status,
+            ClassificacaoEtaria classificacaoEtaria, String imagemCapa, String imagemDivulgacao,
+            List<String> tags, Map<String, String> redesSociais, StatusEvento status,
             PoliticaReembolso politicaReembolso, LocalDateTime dataPublicacao, LocalDateTime criadoEm,
             LocalDateTime atualizadoEm) {
         this.id = id;
@@ -71,6 +95,9 @@ class EventoJpaEntity {
         this.descricao = descricao;
         this.classificacaoEtaria = classificacaoEtaria;
         this.imagemCapa = imagemCapa;
+        this.imagemDivulgacao = imagemDivulgacao;
+        this.tags = new ArrayList<>(tags);
+        this.redesSociais = new LinkedHashMap<>(redesSociais);
         this.status = status;
         this.politicaReembolso = politicaReembolso;
         this.dataPublicacao = dataPublicacao;
@@ -104,6 +131,18 @@ class EventoJpaEntity {
 
     String getImagemCapa() {
         return imagemCapa;
+    }
+
+    String getImagemDivulgacao() {
+        return imagemDivulgacao;
+    }
+
+    List<String> getTags() {
+        return tags;
+    }
+
+    Map<String, String> getRedesSociais() {
+        return redesSociais;
     }
 
     StatusEvento getStatus() {

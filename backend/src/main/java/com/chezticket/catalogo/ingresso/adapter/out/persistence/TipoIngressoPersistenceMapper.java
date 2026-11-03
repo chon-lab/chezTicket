@@ -18,6 +18,8 @@ final class TipoIngressoPersistenceMapper {
                 tipoIngresso.quantidadeTotal(),
                 tipoIngresso.quantidadeVendida(),
                 tipoIngresso.limitePorCompra(),
+                tipoIngresso.inicioVendas(),
+                tipoIngresso.fimVendas(),
                 tipoIngresso.versao());
     }
 
@@ -32,6 +34,8 @@ final class TipoIngressoPersistenceMapper {
                 entidade.getQuantidadeTotal(),
                 entidade.getQuantidadeVendida(),
                 entidade.getLimitePorCompra(),
+                entidade.getInicioVendas(),
+                entidade.getFimVendas(),
                 entidade.getVersao());
     }
 }

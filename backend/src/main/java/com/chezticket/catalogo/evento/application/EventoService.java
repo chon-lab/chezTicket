@@ -49,6 +49,9 @@ public class EventoService implements
                 comando.descricao(),
                 comando.classificacaoEtaria(),
                 comando.imagemCapa(),
+                comando.imagemDivulgacao(),
+                comando.tags(),
+                comando.redesSociais(),
                 comando.politicaReembolso());
         return repositorio.salvar(evento);
     }

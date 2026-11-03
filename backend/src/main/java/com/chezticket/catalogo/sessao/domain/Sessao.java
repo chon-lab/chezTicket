@@ -16,15 +16,17 @@ public class Sessao {
     private Long id;
     private final Long eventoId;
     private Long localId;
+    private String endereco;
     private LocalDateTime inicio;
     private LocalDateTime fim;
     private StatusSessao status;
 
-    private Sessao(Long id, Long eventoId, Long localId, LocalDateTime inicio, LocalDateTime fim,
-            StatusSessao status) {
+    private Sessao(Long id, Long eventoId, Long localId, String endereco,
+            LocalDateTime inicio, LocalDateTime fim, StatusSessao status) {
         this.id = id;
         this.eventoId = eventoId;
         this.localId = localId;
+        this.endereco = normalizarEndereco(endereco);
         this.inicio = inicio;
         this.fim = fim;
         this.status = status;
@@ -32,19 +34,36 @@ public class Sessao {
 
     /** Agenda uma sessão nova para um evento. */
     public static Sessao agendar(Long eventoId, Long localId, LocalDateTime inicio, LocalDateTime fim) {
+        return criar(eventoId, localId, null, inicio, fim);
+    }
+
+    public static Sessao agendarComEndereco(
+            Long eventoId, String endereco, LocalDateTime inicio, LocalDateTime fim) {
+        return criar(eventoId, null, endereco, inicio, fim);
+    }
+
+    private static Sessao criar(
+            Long eventoId, Long localId, String endereco, LocalDateTime inicio, LocalDateTime fim) {
         exigir(eventoId != null, "O evento da sessão é obrigatório.");
-        exigir(localId != null, "O local da sessão é obrigatório.");
+        exigir(localId != null || normalizarEndereco(endereco) != null,
+                "Informe um local cadastrado ou o endereço da sessão.");
         validarPeriodo(inicio, fim);
-        return new Sessao(null, eventoId, localId, inicio, fim, StatusSessao.AGENDADA);
+        return new Sessao(null, eventoId, localId, endereco, inicio, fim, StatusSessao.AGENDADA);
     }
 
     /** Reconstrói uma sessão já existente. Usado pelo adaptador de persistência. */
     public static Sessao reconstituir(Long id, Long eventoId, Long localId, LocalDateTime inicio,
             LocalDateTime fim, StatusSessao status) {
+        return reconstituir(id, eventoId, localId, null, inicio, fim, status);
+    }
+
+    public static Sessao reconstituir(Long id, Long eventoId, Long localId, String endereco,
+            LocalDateTime inicio, LocalDateTime fim, StatusSessao status) {
         return new Sessao(
                 Objects.requireNonNull(id, "id"),
                 Objects.requireNonNull(eventoId, "eventoId"),
                 localId,
+                endereco,
                 inicio,
                 fim,
                 Objects.requireNonNull(status, "status"));
@@ -58,6 +77,7 @@ public class Sessao {
         exigir(localId != null, "O local da sessão é obrigatório.");
         validarPeriodo(inicio, fim);
         this.localId = localId;
+        this.endereco = null;
         this.inicio = inicio;
         this.fim = fim;
     }
@@ -93,6 +113,13 @@ public class Sessao {
         exigir(fim.isAfter(inicio), "O fim da sessão deve ser depois do início.");
     }
 
+    private static String normalizarEndereco(String endereco) {
+        if (endereco == null || endereco.isBlank()) {
+            return null;
+        }
+        return endereco.strip();
+    }
+
     private static void exigir(boolean condicao, String mensagem) {
         if (!condicao) {
             throw new SessaoInvalidaException(mensagem);
@@ -109,6 +136,10 @@ public class Sessao {
 
     public Long localId() {
         return localId;
+    }
+
+    public String endereco() {
+        return endereco;
     }
 
     public LocalDateTime inicio() {

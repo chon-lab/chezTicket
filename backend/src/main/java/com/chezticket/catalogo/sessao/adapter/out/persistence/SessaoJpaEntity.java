@@ -22,8 +22,11 @@ class SessaoJpaEntity {
     @Column(name = "evento_id", nullable = false)
     private Long eventoId;
 
-    @Column(name = "local_id", nullable = false)
+    @Column(name = "local_id")
     private Long localId;
+
+    @Column(length = 500)
+    private String endereco;
 
     @Column(nullable = false)
     private LocalDateTime inicio;
@@ -38,11 +41,12 @@ class SessaoJpaEntity {
     protected SessaoJpaEntity() {
     }
 
-    SessaoJpaEntity(Long id, Long eventoId, Long localId, LocalDateTime inicio, LocalDateTime fim,
-            StatusSessao status) {
+    SessaoJpaEntity(Long id, Long eventoId, Long localId, String endereco,
+            LocalDateTime inicio, LocalDateTime fim, StatusSessao status) {
         this.id = id;
         this.eventoId = eventoId;
         this.localId = localId;
+        this.endereco = endereco;
         this.inicio = inicio;
         this.fim = fim;
         this.status = status;
@@ -58,6 +62,10 @@ class SessaoJpaEntity {
 
     Long getLocalId() {
         return localId;
+    }
+
+    String getEndereco() {
+        return endereco;
     }
 
     LocalDateTime getInicio() {

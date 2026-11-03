@@ -4,3 +4,7 @@
 spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://mariadb:3306/chezticket}
+
+chezticket:
+  storage:
+    upload-dir: ${CHEZTICKET_UPLOAD_DIR:/app/uploads}

@@ -36,22 +36,27 @@ out", enums em dropdown e exemplos preenchidos.
 Por linha de comando:
 
 ```bash
-# Categorias já vêm com seed (V2)
+# Categorias vêm do seed (V2) e do ajuste de catálogo (V5)
 curl http://localhost:8081/api/categorias
 
-# Criar um evento em rascunho (organizador 2 e categoria 1 vêm do seed de demonstração, V3)
+# Criar um evento em rascunho (organizador 2 vem do seed V3; categoria 9 é IA no seed padrão)
 curl -X POST http://localhost:8081/api/eventos \
      -H "Content-Type: application/json" \
-     -d '{"organizadorId":2,"categoriaId":1,"titulo":"Festival de Inverno 2026","descricao":"Shows e oficinas."}'
+     -d '{"organizadorId":2,"categoriaId":9,"titulo":"Festival de Inverno 2026","descricao":"Evento de tecnologia."}'
 
 # Publicar e filtrar
 curl -X POST http://localhost:8081/api/eventos/1/publicacao
 curl "http://localhost:8081/api/eventos?status=PUBLICADO"
 
+# Criar evento, sessão e ingressos juntos; imagemCapa e imagemDivulgacao são opcionais
+curl -X POST http://localhost:8081/api/eventos/completo \
+     -F 'dados={"organizadorId":2,"categoriaId":9,"titulo":"Encontro de IA","descricao":"Evento de tecnologia.","classificacaoEtaria":"LIVRE","politicaReembolso":"PADRAO","endereco":"Av. Exemplo, 100, Rio de Janeiro, RJ","inicio":"2027-01-20T19:00:00","fim":"2027-01-20T22:00:00","tags":["IA","tecnologia"],"redesSociais":{"instagram":"https://instagram.com/exemplo"},"ingressos":[{"nome":"Inteira","gratuito":false,"preco":100.00,"taxaServico":10.00,"quantidadeTotal":200,"limitePorCompra":5,"inicioVendas":"2026-11-03","fimVendas":"2027-01-20"}],"publicar":false};type=application/json' \
+     -F 'imagemCapa=@./capa.jpg;type=image/jpeg'
+
 # Categoria: criar, renomear, desativar
 curl -X POST http://localhost:8081/api/categorias -H "Content-Type: application/json" -d '{"nome":"Feira de Games"}'
-curl -X PUT http://localhost:8081/api/categorias/9 -H "Content-Type: application/json" -d '{"nome":"Feira de Jogos"}'
-curl -X POST http://localhost:8081/api/categorias/9/desativacao
+curl -X PUT http://localhost:8081/api/categorias/16 -H "Content-Type: application/json" -d '{"nome":"Feira de Jogos"}'
+curl -X POST http://localhost:8081/api/categorias/16/desativacao
 
 # Fluxo completo do Módulo de Ingressos: sessão (local 1 do seed) -> tipo de ingresso -> reserva
 curl -X POST http://localhost:8081/api/sessoes -H "Content-Type: application/json" \
@@ -68,6 +73,12 @@ curl -X POST http://localhost:8081/api/reservas -H "Content-Type: application/js
 ## Endpoints
 
 ### Categoria — `/api/categorias`
+
+O catálogo padrão mantém ativas as categorias **IA**, **Robótica**, **Games**, **Hackaton**,
+**Dados** e **Nuvem**, além de **Congressos e Palestras**, **Cursos e Workshops** e
+**Institucional CEFET/RJ**. A categoria composta **Dados e Nuvem**, Shows e Música, Teatro e
+Espetáculos, Esportes, Cultura e Arte e Gastronomia ficam inativas; os registros são preservados
+para manter referências de eventos existentes.
 
 | Método | Rota | Ação |
 |--------|------|------|
@@ -86,11 +97,23 @@ curl -X POST http://localhost:8081/api/reservas -H "Content-Type: application/js
 | `GET`    | `/` | lista (filtros: `?status=`, `?categoriaId=`, `?organizadorId=`) |
 | `GET`    | `/{id}` | detalha |
 | `POST`   | `/` | cria rascunho |
+| `POST`   | `/completo` | cria evento, sessão e ingressos em uma transação (`multipart/form-data`) |
 | `PUT`    | `/{id}` | atualiza dados (só em `RASCUNHO` ou `PUBLICADO`) |
 | `DELETE` | `/{id}` | remove — `RASCUNHO`: qualquer um · outro status: só ADMIN, ver abaixo |
 | `POST`   | `/{id}/publicacao` | `RASCUNHO` → `PUBLICADO` (exige descrição) |
 | `POST`   | `/{id}/cancelamento` | qualquer estado não terminal → `CANCELADO` |
 | `POST`   | `/{id}/encerramento` | `PUBLICADO`/`ESGOTADO` → `ENCERRADO` |
+
+`POST /api/eventos/completo` recebe um campo JSON `dados` com organizador, categoria, título,
+descrição, classificação etária, política de reembolso, endereço digitado, início/fim, tags,
+links sociais, ingressos e a opção `publicar`. O endereço fica associado à sessão sem criar uma
+entrada no catálogo global de locais. Os campos `imagemCapa` e
+`imagemDivulgacao` aceitam JPG, PNG ou WEBP, até 5 MB cada, e são opcionais. A operação cria
+evento, sessão e ingressos atomicamente; `publicar: true` também publica o evento.
+
+As imagens ficam no diretório `uploads/` na raiz do repositório durante o uso local e são servidas
+em `/api/uploads/{arquivo}`. No Docker, o diretório é montado em `./uploads` para sobreviver à
+recriação do container. O caminho pode ser alterado com `CHEZTICKET_UPLOAD_DIR`.
 
 Erros seguem RFC 7807: `400` payload malformado, `403` sem permissão, `404` inexistente,
 `409` conflito, `422` regra de negócio violada.
@@ -178,4 +201,5 @@ Para apontar para outro banco, defina `SPRING_DATASOURCE_URL`, `SPRING_DATASOURC
 ### Schema do banco
 
 O **Flyway é a única fonte da verdade** do schema (`src/main/resources/db/migration/`).
-Nunca edite uma migração já aplicada — crie a próxima (`V4__descricao_curta.sql`).
+Nunca edite uma migração já aplicada — crie a próxima versão disponível (após V7, por exemplo,
+`V8__descricao_curta.sql`).

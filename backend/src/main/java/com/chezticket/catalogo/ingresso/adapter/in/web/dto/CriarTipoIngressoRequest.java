@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 public record CriarTipoIngressoRequest(
         @NotNull
@@ -36,9 +37,21 @@ public record CriarTipoIngressoRequest(
 
         @Positive
         @Schema(description = "Padrão sugerido: 5", example = "5")
-        int limitePorCompra) {
+        int limitePorCompra,
+
+        @Schema(example = "2026-10-01")
+        LocalDate inicioVendas,
+
+        @Schema(example = "2026-12-01")
+        LocalDate fimVendas) {
 
     public NovoTipoIngresso paraComando() {
-        return new NovoTipoIngresso(sessaoId, nome, gratuito, preco, taxaServico, quantidadeTotal, limitePorCompra);
+        return new NovoTipoIngresso(sessaoId, nome, gratuito, preco, taxaServico, quantidadeTotal, limitePorCompra,
+                inicioVendas, fimVendas);
+    }
+
+    public CriarTipoIngressoRequest(Long sessaoId, String nome, boolean gratuito, BigDecimal preco,
+            BigDecimal taxaServico, int quantidadeTotal, int limitePorCompra) {
+        this(sessaoId, nome, gratuito, preco, taxaServico, quantidadeTotal, limitePorCompra, null, null);
     }
 }
