@@ -25,7 +25,6 @@ class EventoTest {
         assertThat(evento.classificacaoEtaria()).isEqualTo(ClassificacaoEtaria.LIVRE);
         assertThat(evento.politicaReembolso()).isEqualTo(PoliticaReembolso.PADRAO);
         assertThat(evento.dataPublicacao()).isNull();
-        assertThat(evento.podeSerRemovido()).isTrue();
     }
 
     @Test
@@ -71,7 +70,6 @@ class EventoTest {
 
         assertThat(evento.status()).isEqualTo(StatusEvento.PUBLICADO);
         assertThat(evento.dataPublicacao()).isNotNull();
-        assertThat(evento.podeSerRemovido()).isFalse();
     }
 
     @Test

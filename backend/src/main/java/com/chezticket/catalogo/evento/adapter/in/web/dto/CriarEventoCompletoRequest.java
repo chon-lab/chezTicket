@@ -7,9 +7,12 @@ import com.chezticket.catalogo.evento.domain.PoliticaReembolso;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
@@ -33,6 +36,7 @@ public record CriarEventoCompletoRequest(
         @Size(max = 20) List<@NotBlank @Size(max = 80) String> tags,
         Map<@NotBlank @Size(max = 20) String, @NotBlank @Size(max = 2048) String> redesSociais,
         @NotEmpty List<@Valid Ingresso> ingressos,
+        @Valid Cupom cupom,
         boolean publicar) {
 
     private static final Set<String> REDES_SUPORTADAS = Set.of("instagram", "facebook", "x", "linkedin");
@@ -43,6 +47,11 @@ public record CriarEventoCompletoRequest(
     }
 
     public NovoEventoCompleto paraComando(ImagemUpload imagemCapa, ImagemUpload imagemDivulgacao) {
+        return paraComando(organizadorId, imagemCapa, imagemDivulgacao);
+    }
+
+    public NovoEventoCompleto paraComando(
+            Long organizadorIdEfetivo, ImagemUpload imagemCapa, ImagemUpload imagemDivulgacao) {
         List<NovoEventoCompleto.NovoIngresso> novosIngressos = ingressos.stream()
                 .map(ingresso -> new NovoEventoCompleto.NovoIngresso(
                         ingresso.nome(),
@@ -56,7 +65,7 @@ public record CriarEventoCompletoRequest(
                 .toList();
 
         return new NovoEventoCompleto(
-                organizadorId,
+                organizadorIdEfetivo,
                 categoriaId,
                 titulo,
                 descricao,
@@ -68,9 +77,19 @@ public record CriarEventoCompletoRequest(
                 tags,
                 redesSociais,
                 novosIngressos,
+                cupom == null
+                        ? null
+                        : new NovoEventoCompleto.NovoCupom(cupom.codigo(), cupom.percentualDesconto()),
                 imagemCapa,
                 imagemDivulgacao,
                 publicar);
+    }
+
+    public record Cupom(
+            @NotBlank @Pattern(regexp = "[A-Za-z0-9]{8}",
+                    message = "O código deve conter exatamente 8 caracteres alfanuméricos.")
+            String codigo,
+            @NotNull @Min(1) @Max(100) Integer percentualDesconto) {
     }
 
     public record Ingresso(

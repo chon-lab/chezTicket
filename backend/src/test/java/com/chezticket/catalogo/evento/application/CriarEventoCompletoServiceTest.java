@@ -14,6 +14,7 @@ import com.chezticket.catalogo.evento.application.port.in.ImagemUpload;
 import com.chezticket.catalogo.evento.application.port.in.NovoEvento;
 import com.chezticket.catalogo.evento.application.port.in.NovoEventoCompleto;
 import com.chezticket.catalogo.evento.application.port.out.ArmazenarImagemPort;
+import com.chezticket.catalogo.cupom.application.port.in.CriarCupomUseCase;
 import com.chezticket.catalogo.evento.domain.ClassificacaoEtaria;
 import com.chezticket.catalogo.evento.domain.Evento;
 import com.chezticket.catalogo.evento.domain.PoliticaReembolso;
@@ -39,8 +40,9 @@ class CriarEventoCompletoServiceTest {
     private final GerenciarCicloDeVidaDoEventoUseCase cicloDeVida =
             mock(GerenciarCicloDeVidaDoEventoUseCase.class);
     private final ArmazenarImagemPort armazenamento = mock(ArmazenarImagemPort.class);
+    private final CriarCupomUseCase criarCupom = mock(CriarCupomUseCase.class);
     private final CriarEventoCompletoService service = new CriarEventoCompletoService(
-            criarEvento, agendarSessao, cadastrarIngresso, cicloDeVida, armazenamento);
+            criarEvento, agendarSessao, cadastrarIngresso, cicloDeVida, armazenamento, criarCupom);
 
     private Evento evento;
     private Sessao sessao;
@@ -78,6 +80,7 @@ class CriarEventoCompletoServiceTest {
                         5,
                         LocalDate.now(),
                         LocalDate.now().plusDays(10))),
+                null,
                 capa,
                 divulgacao,
                 true);
@@ -105,6 +108,31 @@ class CriarEventoCompletoServiceTest {
         verify(cicloDeVida).publicar(11L);
         assertThat(sessaoComando.getValue().localId()).isNull();
         assertThat(sessaoComando.getValue().endereco()).isEqualTo(comando.endereco());
+    }
+
+    @Test
+    void criaCupomVinculadoAoEventoAteOInicioDaSessao() {
+        NovoEventoCompleto comCupom = new NovoEventoCompleto(
+                comando.organizadorId(),
+                comando.categoriaId(),
+                comando.titulo(),
+                comando.descricao(),
+                comando.classificacaoEtaria(),
+                comando.politicaReembolso(),
+                comando.endereco(),
+                comando.inicio(),
+                comando.fim(),
+                comando.tags(),
+                comando.redesSociais(),
+                comando.ingressos(),
+                new NovoEventoCompleto.NovoCupom("12345678", 20),
+                comando.imagemCapa(),
+                comando.imagemDivulgacao(),
+                comando.publicar());
+
+        service.criar(comCupom);
+
+        verify(criarCupom).criar(11L, "12345678", 20, comando.inicio());
     }
 
     @Test

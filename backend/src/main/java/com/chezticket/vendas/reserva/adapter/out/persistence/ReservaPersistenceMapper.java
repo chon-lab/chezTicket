@@ -12,6 +12,7 @@ final class ReservaPersistenceMapper {
         ReservaJpaEntity entidade = new ReservaJpaEntity(
                 reserva.id(),
                 reserva.participanteId(),
+                reserva.cupomId(),
                 reserva.expiraEm(),
                 reserva.status(),
                 reserva.criadaEm());
@@ -28,6 +29,7 @@ final class ReservaPersistenceMapper {
                 entidade.getItens().stream()
                         .map(item -> new ItemReserva(item.getTipoIngressoId(), item.getQuantidade()))
                         .toList(),
+                entidade.getCupomId(),
                 entidade.getExpiraEm(),
                 entidade.getStatus(),
                 entidade.getCriadaEm());

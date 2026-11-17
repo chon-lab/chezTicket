@@ -20,15 +20,17 @@ public class Reserva {
     private Long id;
     private final Long participanteId;
     private final List<ItemReserva> itens;
+    private final Long cupomId;
     private LocalDateTime expiraEm;
     private StatusReserva status;
     private final LocalDateTime criadaEm;
 
-    private Reserva(Long id, Long participanteId, List<ItemReserva> itens, LocalDateTime expiraEm,
+    private Reserva(Long id, Long participanteId, List<ItemReserva> itens, Long cupomId, LocalDateTime expiraEm,
             StatusReserva status, LocalDateTime criadaEm) {
         this.id = id;
         this.participanteId = participanteId;
         this.itens = itens;
+        this.cupomId = cupomId;
         this.expiraEm = expiraEm;
         this.status = status;
         this.criadaEm = criadaEm;
@@ -36,22 +38,32 @@ public class Reserva {
 
     /** Cria uma reserva nova, ATIVA, válida por {@code duracao} a partir de agora. */
     public static Reserva criar(Long participanteId, List<ItemReserva> itens, Duration duracao) {
+        return criar(participanteId, itens, null, duracao);
+    }
+
+    public static Reserva criar(Long participanteId, List<ItemReserva> itens, Long cupomId, Duration duracao) {
         exigir(participanteId != null, "O participante da reserva é obrigatório.");
         exigir(itens != null && !itens.isEmpty(), "A reserva deve ter ao menos um item.");
         exigir(duracao != null && !duracao.isNegative() && !duracao.isZero(),
                 "A duração da reserva deve ser maior que zero.");
         LocalDateTime agora = LocalDateTime.now();
-        return new Reserva(null, participanteId, List.copyOf(itens), agora.plus(duracao), StatusReserva.ATIVA,
+        return new Reserva(null, participanteId, List.copyOf(itens), cupomId, agora.plus(duracao), StatusReserva.ATIVA,
                 agora);
     }
 
     /** Reconstrói uma reserva já existente. Usado pelo adaptador de persistência. */
     public static Reserva reconstituir(Long id, Long participanteId, List<ItemReserva> itens,
             LocalDateTime expiraEm, StatusReserva status, LocalDateTime criadaEm) {
+        return reconstituir(id, participanteId, itens, null, expiraEm, status, criadaEm);
+    }
+
+    public static Reserva reconstituir(Long id, Long participanteId, List<ItemReserva> itens, Long cupomId,
+            LocalDateTime expiraEm, StatusReserva status, LocalDateTime criadaEm) {
         return new Reserva(
                 Objects.requireNonNull(id, "id"),
                 Objects.requireNonNull(participanteId, "participanteId"),
                 List.copyOf(itens),
+                cupomId,
                 Objects.requireNonNull(expiraEm, "expiraEm"),
                 Objects.requireNonNull(status, "status"),
                 Objects.requireNonNull(criadaEm, "criadaEm"));
@@ -92,6 +104,10 @@ public class Reserva {
 
     public List<ItemReserva> itens() {
         return itens;
+    }
+
+    public Long cupomId() {
+        return cupomId;
     }
 
     public LocalDateTime expiraEm() {

@@ -96,6 +96,7 @@ para manter referências de eventos existentes.
 |--------|------|------|
 | `GET`    | `/` | lista (filtros: `?status=`, `?categoriaId=`, `?organizadorId=`) |
 | `GET`    | `/{id}` | detalha |
+| `GET`    | `/{id}/compartilhar` | HTML com metadados Open Graph; redireciona para a página do evento |
 | `POST`   | `/` | cria rascunho |
 | `POST`   | `/completo` | cria evento, sessão e ingressos em uma transação (`multipart/form-data`) |
 | `PUT`    | `/{id}` | atualiza dados (só em `RASCUNHO` ou `PUBLICADO`) |
@@ -114,6 +115,10 @@ evento, sessão e ingressos atomicamente; `publicar: true` também publica o eve
 As imagens ficam no diretório `uploads/` na raiz do repositório durante o uso local e são servidas
 em `/api/uploads/{arquivo}`. No Docker, o diretório é montado em `./uploads` para sobreviver à
 recriação do container. O caminho pode ser alterado com `CHEZTICKET_UPLOAD_DIR`.
+O endpoint `GET /api/eventos/{id}/compartilhar` usa `imagemDivulgacao` como imagem da prévia
+(com `imagemCapa` como alternativa). Em produção, configure `CHEZTICKET_FRONTEND_URL` e
+`CHEZTICKET_PUBLIC_API_URL` com as origens públicas HTTPS do frontend e da API (a URL da API
+sem o sufixo `/api`) para que o WhatsApp consiga acessar a página e a imagem.
 
 Erros seguem RFC 7807: `400` payload malformado, `403` sem permissão, `404` inexistente,
 `409` conflito, `422` regra de negócio violada.

@@ -9,4 +9,6 @@ public interface GerenciarEstoqueDeIngressosPort {
     void reservarUnidades(Long tipoIngressoId, int quantidade);
 
     void liberarUnidades(Long tipoIngressoId, int quantidade);
+
+    Long eventoIdDoIngresso(Long tipoIngressoId);
 }

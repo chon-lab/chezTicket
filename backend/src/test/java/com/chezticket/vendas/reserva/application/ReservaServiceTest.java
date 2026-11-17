@@ -1,5 +1,7 @@
 package com.chezticket.vendas.reserva.application;
 
+import com.chezticket.catalogo.cupom.application.port.in.ValidarCupomUseCase;
+import com.chezticket.catalogo.cupom.domain.Cupom;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -40,11 +42,14 @@ class ReservaServiceTest {
     @Mock
     GerenciarEstoqueDeIngressosPort estoque;
 
+    @Mock
+    ValidarCupomUseCase validarCupom;
+
     ReservaService service;
 
     @BeforeEach
     void setUp() {
-        service = new ReservaService(repositorio, verificarParticipante, estoque);
+        service = new ReservaService(repositorio, verificarParticipante, estoque, validarCupom);
     }
 
     @Test
@@ -57,6 +62,24 @@ class ReservaServiceTest {
         assertThat(reserva.participanteId()).isEqualTo(4L);
         verify(estoque).reservarUnidades(1L, 2);
         verify(repositorio).salvar(any(Reserva.class));
+    }
+
+    @Test
+    void deveValidarCupomDoEventoEAssociarAReserva() {
+        when(verificarParticipante.participanteExiste(4L)).thenReturn(true);
+        when(validarCupom.validar(10L, "12345678"))
+                .thenReturn(new Cupom(8L, 10L, "12345678", 25, LocalDateTime.now().plusDays(1)));
+        when(estoque.eventoIdDoIngresso(1L)).thenReturn(10L);
+        when(repositorio.salvar(any(Reserva.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Reserva reserva = service.reservar(new NovaReserva(
+                4L,
+                List.of(new ItemReservaComando(1L, 2)),
+                10L,
+                "12345678"));
+
+        assertThat(reserva.cupomId()).isEqualTo(8L);
+        verify(validarCupom).validar(10L, "12345678");
     }
 
     @Test

@@ -152,26 +152,36 @@ class EventoServiceTest {
     }
 
     @Test
-    void qualquerUmPodeRemoverRascunhoSemPrecisarDeAdmin() {
+    void organizadorPodeRemoverProprioRascunhoSemPrecisarDeAdmin() {
         when(repositorio.buscarPorId(1L)).thenReturn(Optional.of(rascunhoExistente()));
 
-        service.remover(1L, null);
+        service.remover(1L, 2L);
 
         verify(repositorio).remover(1L);
         verify(verificarPapel, never()).ehAdministrador(any());
     }
 
     @Test
-    void naoAdministradorNaoRemoveEventoPublicado() {
-        Evento evento = rascunhoExistente();
-        evento.publicar();
-        when(repositorio.buscarPorId(1L)).thenReturn(Optional.of(evento));
+    void naoOrganizadorNaoPodeRemoverRascunho() {
+        when(repositorio.buscarPorId(1L)).thenReturn(Optional.of(rascunhoExistente()));
         when(verificarPapel.ehAdministrador(7L)).thenReturn(false);
 
         assertThatThrownBy(() -> service.remover(1L, 7L))
                 .isInstanceOf(RemocaoNaoAutorizadaException.class);
 
         verify(repositorio, never()).remover(anyLong());
+    }
+
+    @Test
+    void organizadorPodeRemoverProprioEventoPublicado() {
+        Evento evento = rascunhoExistente();
+        evento.publicar();
+        when(repositorio.buscarPorId(1L)).thenReturn(Optional.of(evento));
+
+        service.remover(1L, 2L);
+
+        verify(repositorio).remover(1L);
+        verify(verificarPapel, never()).ehAdministrador(any());
     }
 
     @Test

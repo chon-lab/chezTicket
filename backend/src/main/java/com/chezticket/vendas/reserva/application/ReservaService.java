@@ -1,5 +1,6 @@
 package com.chezticket.vendas.reserva.application;
 
+import com.chezticket.catalogo.cupom.application.port.in.ValidarCupomUseCase;
 import com.chezticket.vendas.reserva.application.port.in.CancelarReservaUseCase;
 import com.chezticket.vendas.reserva.application.port.in.ConsultarReservasUseCase;
 import com.chezticket.vendas.reserva.application.port.in.ExpirarReservasVencidasUseCase;
@@ -33,12 +34,14 @@ public class ReservaService implements
     private final ReservaRepositorio repositorio;
     private final VerificarParticipantePort verificarParticipante;
     private final GerenciarEstoqueDeIngressosPort estoque;
+    private final ValidarCupomUseCase validarCupom;
 
     public ReservaService(ReservaRepositorio repositorio, VerificarParticipantePort verificarParticipante,
-            GerenciarEstoqueDeIngressosPort estoque) {
+            GerenciarEstoqueDeIngressosPort estoque, ValidarCupomUseCase validarCupom) {
         this.repositorio = repositorio;
         this.verificarParticipante = verificarParticipante;
         this.estoque = estoque;
+        this.validarCupom = validarCupom;
     }
 
     @Override
@@ -53,11 +56,24 @@ public class ReservaService implements
         List<ItemReserva> itens = comando.itens().stream()
                 .map(item -> new ItemReserva(item.tipoIngressoId(), item.quantidade()))
                 .toList();
+        Long cupomId = null;
+        if (comando.codigoCupom() != null) {
+            if (comando.eventoId() == null) {
+                throw new ReservaInvalidaException("Informe o evento para validar o cupom.");
+            }
+            var cupom = validarCupom.validar(comando.eventoId(), comando.codigoCupom());
+            for (ItemReserva item : itens) {
+                if (!comando.eventoId().equals(estoque.eventoIdDoIngresso(item.tipoIngressoId()))) {
+                    throw new ReservaInvalidaException("O cupom só pode ser usado nos ingressos do evento correspondente.");
+                }
+            }
+            cupomId = cupom.id();
+        }
         for (ItemReserva item : itens) {
             estoque.reservarUnidades(item.tipoIngressoId(), item.quantidade());
         }
 
-        Reserva reserva = Reserva.criar(comando.participanteId(), itens, DURACAO_DA_RESERVA);
+        Reserva reserva = Reserva.criar(comando.participanteId(), itens, cupomId, DURACAO_DA_RESERVA);
         return repositorio.salvar(reserva);
     }
 

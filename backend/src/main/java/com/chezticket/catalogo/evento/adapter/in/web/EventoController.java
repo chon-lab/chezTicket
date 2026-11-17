@@ -1,5 +1,6 @@
 package com.chezticket.catalogo.evento.adapter.in.web;
 
+import com.chezticket.identidade.SessaoUsuario;
 import com.chezticket.catalogo.evento.adapter.in.web.dto.AtualizarEventoRequest;
 import com.chezticket.catalogo.evento.adapter.in.web.dto.CriarEventoRequest;
 import com.chezticket.catalogo.evento.adapter.in.web.dto.CriarEventoCompletoRequest;
@@ -20,6 +21,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.io.IOException;
@@ -103,8 +105,11 @@ class EventoController {
     ResponseEntity<EventoCompletoResponse> criarCompleto(
             @Valid @RequestPart("dados") CriarEventoCompletoRequest request,
             @RequestPart(value = "imagemCapa", required = false) MultipartFile imagemCapa,
-            @RequestPart(value = "imagemDivulgacao", required = false) MultipartFile imagemDivulgacao) {
+            @RequestPart(value = "imagemDivulgacao", required = false) MultipartFile imagemDivulgacao,
+            HttpSession session) {
+        long organizadorAutenticado = SessaoUsuario.exigirId(session);
         var criado = criarEventoCompleto.criar(request.paraComando(
+            organizadorAutenticado,
                 paraImagemUpload(imagemCapa),
                 paraImagemUpload(imagemDivulgacao)));
         return ResponseEntity
@@ -131,20 +136,17 @@ class EventoController {
     }
 
     @Operation(summary = "Remove um evento",
-            description = "Rascunho: qualquer um remove. Evento já publicado/encerrado/cancelado: "
-                    + "só administrador (informe o X-Usuario-Id de um administrador — "
-                    + "o id 3 do seed de demonstração serve para teste). "
-                    + "⚠️ Provisório: sem autenticação ainda, este header não é verificado "
-                    + "contra uma sessão real — é só o que a regra de autorização já enxerga hoje.")
+            description = "O organizador autenticado pode remover os próprios eventos de qualquer status. "
+                        + "Administradores podem remover qualquer evento. Os dados associados também são removidos.")
     @ApiResponse(responseCode = "204", description = "Removido")
-    @ApiResponse(responseCode = "403", description = "Não é administrador e o evento não está em rascunho")
+    @ApiResponse(responseCode = "401", description = "Autenticação necessária")
+    @ApiResponse(responseCode = "403", description = "O usuário não é organizador do evento nem administrador")
     @ApiResponse(responseCode = "404", description = "Evento inexistente")
     @DeleteMapping("/{id}")
     ResponseEntity<Void> remover(
             @PathVariable Long id,
-            @RequestHeader(value = "X-Usuario-Id", required = false)
-            @Parameter(description = "Id do usuário solicitante. Só é checado se o evento não estiver em rascunho.")
-            Long solicitanteId) {
+            HttpSession session) {
+        long solicitanteId = SessaoUsuario.exigirId(session);
         removerEvento.remover(id, solicitanteId);
         return ResponseEntity.noContent().build();
     }

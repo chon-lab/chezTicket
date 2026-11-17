@@ -1,5 +1,6 @@
 package com.chezticket.catalogo.evento.application;
 
+import com.chezticket.catalogo.cupom.application.port.in.CriarCupomUseCase;
 import com.chezticket.catalogo.evento.application.port.in.CriarEventoCompletoUseCase;
 import com.chezticket.catalogo.evento.application.port.in.CriarEventoUseCase;
 import com.chezticket.catalogo.evento.application.port.in.EventoCompletoCriado;
@@ -27,18 +28,21 @@ public class CriarEventoCompletoService implements CriarEventoCompletoUseCase {
     private final CadastrarTipoIngressoUseCase cadastrarIngresso;
     private final GerenciarCicloDeVidaDoEventoUseCase cicloDeVida;
     private final ArmazenarImagemPort armazenamento;
+    private final CriarCupomUseCase criarCupom;
 
     public CriarEventoCompletoService(
             CriarEventoUseCase criarEvento,
             AgendarSessaoUseCase agendarSessao,
             CadastrarTipoIngressoUseCase cadastrarIngresso,
             GerenciarCicloDeVidaDoEventoUseCase cicloDeVida,
-            ArmazenarImagemPort armazenamento) {
+            ArmazenarImagemPort armazenamento,
+            CriarCupomUseCase criarCupom) {
         this.criarEvento = criarEvento;
         this.agendarSessao = agendarSessao;
         this.cadastrarIngresso = cadastrarIngresso;
         this.cicloDeVida = cicloDeVida;
         this.armazenamento = armazenamento;
+        this.criarCupom = criarCupom;
     }
 
     @Override
@@ -81,6 +85,14 @@ public class CriarEventoCompletoService implements CriarEventoCompletoUseCase {
                             ingresso.inicioVendas(),
                             ingresso.fimVendas())))
                     .toList();
+
+            if (comando.cupom() != null) {
+                criarCupom.criar(
+                        evento.id(),
+                        comando.cupom().codigo(),
+                        comando.cupom().percentualDesconto(),
+                        comando.inicio());
+            }
 
             if (comando.publicar()) {
                 evento = cicloDeVida.publicar(evento.id());

@@ -171,10 +171,6 @@ public class Evento {
         this.atualizadoEm = LocalDateTime.now();
     }
 
-    public boolean podeSerRemovido() {
-        return status == StatusEvento.RASCUNHO;
-    }
-
     // ------------------------------------------------------------------
     // Validações internas
     // ------------------------------------------------------------------

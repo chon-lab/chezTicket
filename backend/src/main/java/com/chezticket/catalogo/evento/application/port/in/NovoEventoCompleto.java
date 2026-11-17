@@ -20,9 +20,13 @@ public record NovoEventoCompleto(
         List<String> tags,
         Map<String, String> redesSociais,
         List<NovoIngresso> ingressos,
+        NovoCupom cupom,
         ImagemUpload imagemCapa,
         ImagemUpload imagemDivulgacao,
         boolean publicar) {
+
+    public record NovoCupom(String codigo, int percentualDesconto) {
+    }
 
     public record NovoIngresso(
             String nome,

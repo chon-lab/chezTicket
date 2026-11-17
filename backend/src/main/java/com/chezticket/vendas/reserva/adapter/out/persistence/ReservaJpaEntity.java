@@ -27,6 +27,9 @@ class ReservaJpaEntity {
     @Column(name = "participante_id", nullable = false)
     private Long participanteId;
 
+    @Column(name = "cupom_id")
+    private Long cupomId;
+
     @Column(name = "expira_em", nullable = false)
     private LocalDateTime expiraEm;
 
@@ -43,10 +46,11 @@ class ReservaJpaEntity {
     protected ReservaJpaEntity() {
     }
 
-    ReservaJpaEntity(Long id, Long participanteId, LocalDateTime expiraEm, StatusReserva status,
+    ReservaJpaEntity(Long id, Long participanteId, Long cupomId, LocalDateTime expiraEm, StatusReserva status,
             LocalDateTime criadaEm) {
         this.id = id;
         this.participanteId = participanteId;
+        this.cupomId = cupomId;
         this.expiraEm = expiraEm;
         this.status = status;
         this.criadaEm = criadaEm;
@@ -62,6 +66,10 @@ class ReservaJpaEntity {
 
     Long getParticipanteId() {
         return participanteId;
+    }
+
+    Long getCupomId() {
+        return cupomId;
     }
 
     LocalDateTime getExpiraEm() {

@@ -32,6 +32,8 @@ spring:
       max-request-size: 11MB
 
 chezticket:
+  frontend-url: ${CHEZTICKET_FRONTEND_URL:http://localhost:5173}
+  public-api-url: ${CHEZTICKET_PUBLIC_API_URL:http://localhost:8081}
   storage:
     upload-dir: ${CHEZTICKET_UPLOAD_DIR:../uploads}
 
