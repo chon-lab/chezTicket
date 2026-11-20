@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.util.List;
+import java.util.Map;
 
 public record CriarEventoRequest(
         @NotNull
@@ -34,10 +36,22 @@ public record CriarEventoRequest(
         String imagemCapa,
 
         @Schema(description = "Padrão: PADRAO", example = "PADRAO")
-        PoliticaReembolso politicaReembolso) {
+        PoliticaReembolso politicaReembolso,
+
+        @Size(max = 20)
+        List<@NotBlank @Size(max = 80) String> tags,
+
+        Map<@NotBlank @Size(max = 20) String, @NotBlank @Size(max = 2048) String> redesSociais) {
 
     public NovoEvento paraComando() {
         return new NovoEvento(organizadorId, categoriaId, titulo, descricao,
-                classificacaoEtaria, imagemCapa, politicaReembolso);
+                classificacaoEtaria, imagemCapa, null, tags, redesSociais, politicaReembolso);
+    }
+
+    public CriarEventoRequest(Long organizadorId, Long categoriaId, String titulo, String descricao,
+            ClassificacaoEtaria classificacaoEtaria, String imagemCapa,
+            PoliticaReembolso politicaReembolso) {
+        this(organizadorId, categoriaId, titulo, descricao, classificacaoEtaria, imagemCapa,
+                politicaReembolso, List.of(), Map.of());
     }
 }

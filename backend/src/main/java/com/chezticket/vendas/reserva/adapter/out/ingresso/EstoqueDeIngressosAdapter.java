@@ -34,6 +34,12 @@ class EstoqueDeIngressosAdapter implements GerenciarEstoqueDeIngressosPort {
         tiposIngresso.salvar(tipoIngresso);
     }
 
+    @Override
+    public Long eventoIdDoIngresso(Long tipoIngressoId) {
+        return tiposIngresso.buscarEventoId(tipoIngressoId)
+                .orElseThrow(() -> new TipoIngressoNaoEncontradoException(tipoIngressoId));
+    }
+
     private TipoIngresso carregar(Long tipoIngressoId) {
         return tiposIngresso.buscarPorId(tipoIngressoId)
                 .orElseThrow(() -> new TipoIngressoNaoEncontradoException(tipoIngressoId));

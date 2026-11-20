@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.chezticket.catalogo.evento.domain.exception.EventoInvalidoException;
 import com.chezticket.catalogo.evento.domain.exception.TransicaoDeStatusInvalidaException;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class EventoTest {
@@ -23,7 +25,27 @@ class EventoTest {
         assertThat(evento.classificacaoEtaria()).isEqualTo(ClassificacaoEtaria.LIVRE);
         assertThat(evento.politicaReembolso()).isEqualTo(PoliticaReembolso.PADRAO);
         assertThat(evento.dataPublicacao()).isNull();
-        assertThat(evento.podeSerRemovido()).isTrue();
+    }
+
+    @Test
+    void normalizaMetadadosEImagensDoEvento() {
+        Evento evento = Evento.criarRascunho(
+                2L,
+                1L,
+                "Encontro de IA",
+                "Evento de tecnologia.",
+                ClassificacaoEtaria.LIVRE,
+                "/api/uploads/capa.png",
+                "/api/uploads/divulgacao.jpg",
+                List.of(" IA ", "", "IA", "Robótica"),
+                Map.of("instagram", " https://instagram.com/exemplo ", "facebook", " "),
+                PoliticaReembolso.PADRAO);
+
+        assertThat(evento.imagemCapa()).isEqualTo("/api/uploads/capa.png");
+        assertThat(evento.imagemDivulgacao()).isEqualTo("/api/uploads/divulgacao.jpg");
+        assertThat(evento.tags()).containsExactly("IA", "Robótica");
+        assertThat(evento.redesSociais()).containsEntry("instagram", "https://instagram.com/exemplo");
+        assertThat(evento.redesSociais()).doesNotContainKey("facebook");
     }
 
     @Test
@@ -48,7 +70,6 @@ class EventoTest {
 
         assertThat(evento.status()).isEqualTo(StatusEvento.PUBLICADO);
         assertThat(evento.dataPublicacao()).isNotNull();
-        assertThat(evento.podeSerRemovido()).isFalse();
     }
 
     @Test

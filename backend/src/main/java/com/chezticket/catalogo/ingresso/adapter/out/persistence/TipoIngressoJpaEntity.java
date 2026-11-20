@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * {@code @Version} dá controle de concorrência otimista: duas reservas simultâneas no mesmo
@@ -47,6 +48,12 @@ class TipoIngressoJpaEntity {
     @Column(name = "limite_por_compra", nullable = false)
     private int limitePorCompra;
 
+    @Column(name = "inicio_vendas")
+    private LocalDate inicioVendas;
+
+    @Column(name = "fim_vendas")
+    private LocalDate fimVendas;
+
     @Version
     @Column(nullable = false)
     private long versao;
@@ -56,7 +63,7 @@ class TipoIngressoJpaEntity {
 
     TipoIngressoJpaEntity(Long id, Long sessaoId, String nome, boolean gratuito, BigDecimal preco,
             BigDecimal taxaServico, int quantidadeTotal, int quantidadeVendida, int limitePorCompra,
-            long versao) {
+            LocalDate inicioVendas, LocalDate fimVendas, long versao) {
         this.id = id;
         this.sessaoId = sessaoId;
         this.nome = nome;
@@ -66,6 +73,8 @@ class TipoIngressoJpaEntity {
         this.quantidadeTotal = quantidadeTotal;
         this.quantidadeVendida = quantidadeVendida;
         this.limitePorCompra = limitePorCompra;
+        this.inicioVendas = inicioVendas;
+        this.fimVendas = fimVendas;
         this.versao = versao;
     }
 
@@ -103,6 +112,14 @@ class TipoIngressoJpaEntity {
 
     int getLimitePorCompra() {
         return limitePorCompra;
+    }
+
+    LocalDate getInicioVendas() {
+        return inicioVendas;
+    }
+
+    LocalDate getFimVendas() {
+        return fimVendas;
     }
 
     long getVersao() {

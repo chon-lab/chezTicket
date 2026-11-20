@@ -26,6 +26,6 @@ public record CriarSessaoRequest(
         LocalDateTime fim) {
 
     public NovaSessao paraComando() {
-        return new NovaSessao(eventoId, localId, inicio, fim);
+        return new NovaSessao(eventoId, localId, null, inicio, fim);
     }
 }

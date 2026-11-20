@@ -42,6 +42,17 @@ class SessaoTest {
     }
 
     @Test
+    void agendaSessaoComEnderecoDigitadoSemLocalCadastrado() {
+        Sessao sessao = Sessao.agendarComEndereco(
+                1L, " Rua Exemplo, 100, Rio de Janeiro, RJ ", inicio, fim);
+
+        assertThat(sessao.localId()).isNull();
+        assertThat(sessao.endereco()).isEqualTo("Rua Exemplo, 100, Rio de Janeiro, RJ");
+        assertThatThrownBy(() -> Sessao.agendarComEndereco(1L, null, inicio, fim))
+                .isInstanceOf(SessaoInvalidaException.class);
+    }
+
+    @Test
     void deveIniciarEDepoisEncerrar() {
         Sessao sessao = agendadaValida();
 

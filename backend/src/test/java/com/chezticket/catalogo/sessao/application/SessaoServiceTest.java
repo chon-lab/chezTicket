@@ -63,6 +63,19 @@ class SessaoServiceTest {
     }
 
     @Test
+    void deveAgendarComEnderecoDigitadoSemConsultarCatalogoDeLocais() {
+        when(verificarEvento.eventoExiste(1L)).thenReturn(true);
+        when(repositorio.salvar(any(Sessao.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Sessao sessao = service.agendar(
+                NovaSessao.comEndereco(1L, "Rua Exemplo, 100, Rio de Janeiro, RJ", inicio, fim));
+
+        assertThat(sessao.localId()).isNull();
+        assertThat(sessao.endereco()).isEqualTo("Rua Exemplo, 100, Rio de Janeiro, RJ");
+        verify(verificarLocal, never()).localExiste(any());
+    }
+
+    @Test
     void naoDeveAgendarQuandoEventoNaoExiste() {
         when(verificarEvento.eventoExiste(99L)).thenReturn(false);
 

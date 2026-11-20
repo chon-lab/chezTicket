@@ -11,6 +11,8 @@ public interface TipoIngressoRepositorio {
 
     Optional<TipoIngresso> buscarPorId(Long id);
 
+    Optional<Long> buscarEventoId(Long tipoIngressoId);
+
     List<TipoIngresso> listarPorSessao(Long sessaoId);
 
     void remover(Long id);

@@ -1,0 +1,4 @@
+ALTER TABLE sessao
+    MODIFY COLUMN local_id BIGINT NULL,
+    DROP COLUMN duracao,
+    ADD COLUMN endereco VARCHAR(500) NULL;

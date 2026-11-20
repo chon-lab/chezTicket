@@ -27,6 +27,11 @@ class TipoIngressoPersistenceAdapter implements TipoIngressoRepositorio {
     }
 
     @Override
+    public Optional<Long> buscarEventoId(Long tipoIngressoId) {
+        return jpa.buscarEventoId(tipoIngressoId);
+    }
+
+    @Override
     public List<TipoIngresso> listarPorSessao(Long sessaoId) {
         return jpa.findAllBySessaoIdOrderByNomeAsc(sessaoId).stream()
                 .map(TipoIngressoPersistenceMapper::paraDominio)

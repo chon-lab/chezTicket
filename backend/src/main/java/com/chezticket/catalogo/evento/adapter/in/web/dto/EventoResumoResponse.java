@@ -10,10 +10,12 @@ public record EventoResumoResponse(
         String status,
         Long categoriaId,
         Long organizadorId,
+        String imagemCapa,
         LocalDateTime dataPublicacao) {
 
     public static EventoResumoResponse de(Evento e) {
         return new EventoResumoResponse(
-                e.id(), e.titulo(), e.status().name(), e.categoriaId(), e.organizadorId(), e.dataPublicacao());
+                e.id(), e.titulo(), e.status().name(), e.categoriaId(), e.organizadorId(),
+                e.imagemCapa(), e.dataPublicacao());
     }
 }

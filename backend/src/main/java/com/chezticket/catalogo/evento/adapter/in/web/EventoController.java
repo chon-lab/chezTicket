@@ -1,9 +1,14 @@
 package com.chezticket.catalogo.evento.adapter.in.web;
 
+import com.chezticket.identidade.SessaoUsuario;
 import com.chezticket.catalogo.evento.adapter.in.web.dto.AtualizarEventoRequest;
 import com.chezticket.catalogo.evento.adapter.in.web.dto.CriarEventoRequest;
+import com.chezticket.catalogo.evento.adapter.in.web.dto.CriarEventoCompletoRequest;
+import com.chezticket.catalogo.evento.adapter.in.web.dto.EventoCompletoResponse;
 import com.chezticket.catalogo.evento.adapter.in.web.dto.EventoResponse;
 import com.chezticket.catalogo.evento.adapter.in.web.dto.EventoResumoResponse;
+import com.chezticket.catalogo.evento.application.port.in.CriarEventoCompletoUseCase;
+import com.chezticket.catalogo.evento.application.port.in.ImagemUpload;
 import com.chezticket.catalogo.evento.application.port.in.AtualizarEventoUseCase;
 import com.chezticket.catalogo.evento.application.port.in.ConsultarEventosUseCase;
 import com.chezticket.catalogo.evento.application.port.in.CriarEventoUseCase;
@@ -16,10 +21,15 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,6 +39,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Eventos", description = "Cadastro e ciclo de vida dos eventos do catálogo")
@@ -37,17 +48,20 @@ import org.springframework.web.bind.annotation.RestController;
 class EventoController {
 
     private final CriarEventoUseCase criarEvento;
+    private final CriarEventoCompletoUseCase criarEventoCompleto;
     private final AtualizarEventoUseCase atualizarEvento;
     private final ConsultarEventosUseCase consultarEventos;
     private final GerenciarCicloDeVidaDoEventoUseCase cicloDeVida;
     private final RemoverEventoUseCase removerEvento;
 
     EventoController(CriarEventoUseCase criarEvento,
+            CriarEventoCompletoUseCase criarEventoCompleto,
             AtualizarEventoUseCase atualizarEvento,
             ConsultarEventosUseCase consultarEventos,
             GerenciarCicloDeVidaDoEventoUseCase cicloDeVida,
             RemoverEventoUseCase removerEvento) {
         this.criarEvento = criarEvento;
+        this.criarEventoCompleto = criarEventoCompleto;
         this.atualizarEvento = atualizarEvento;
         this.consultarEventos = consultarEventos;
         this.cicloDeVida = cicloDeVida;
@@ -84,6 +98,36 @@ class EventoController {
                 .body(EventoResponse.de(evento));
     }
 
+    @Operation(summary = "Cria evento, sessão e ingressos em uma única operação")
+    @ApiResponse(responseCode = "201", description = "Evento e dados relacionados criados")
+    @ApiResponse(responseCode = "422", description = "Dados inválidos ou referências inexistentes")
+    @PostMapping(path = "/completo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    ResponseEntity<EventoCompletoResponse> criarCompleto(
+            @Valid @RequestPart("dados") CriarEventoCompletoRequest request,
+            @RequestPart(value = "imagemCapa", required = false) MultipartFile imagemCapa,
+            @RequestPart(value = "imagemDivulgacao", required = false) MultipartFile imagemDivulgacao,
+            HttpSession session) {
+        long organizadorAutenticado = SessaoUsuario.exigirId(session);
+        var criado = criarEventoCompleto.criar(request.paraComando(
+            organizadorAutenticado,
+                paraImagemUpload(imagemCapa),
+                paraImagemUpload(imagemDivulgacao)));
+        return ResponseEntity
+                .created(URI.create("/api/eventos/" + criado.evento().id()))
+                .body(EventoCompletoResponse.de(criado));
+    }
+
+    private ImagemUpload paraImagemUpload(MultipartFile arquivo) {
+        if (arquivo == null || arquivo.isEmpty()) {
+            return null;
+        }
+        try {
+            return new ImagemUpload(arquivo.getBytes(), arquivo.getContentType());
+        } catch (IOException error) {
+            throw new UncheckedIOException("Não foi possível ler o arquivo enviado.", error);
+        }
+    }
+
     @Operation(summary = "Atualiza os dados de um evento",
             description = "Permitido enquanto o evento estiver em RASCUNHO ou PUBLICADO.")
     @PutMapping("/{id}")
@@ -92,20 +136,17 @@ class EventoController {
     }
 
     @Operation(summary = "Remove um evento",
-            description = "Rascunho: qualquer um remove. Evento já publicado/encerrado/cancelado: "
-                    + "só administrador (informe o X-Usuario-Id de um administrador — "
-                    + "o id 3 do seed de demonstração serve para teste). "
-                    + "⚠️ Provisório: sem autenticação ainda, este header não é verificado "
-                    + "contra uma sessão real — é só o que a regra de autorização já enxerga hoje.")
+            description = "O organizador autenticado pode remover os próprios eventos de qualquer status. "
+                        + "Administradores podem remover qualquer evento. Os dados associados também são removidos.")
     @ApiResponse(responseCode = "204", description = "Removido")
-    @ApiResponse(responseCode = "403", description = "Não é administrador e o evento não está em rascunho")
+    @ApiResponse(responseCode = "401", description = "Autenticação necessária")
+    @ApiResponse(responseCode = "403", description = "O usuário não é organizador do evento nem administrador")
     @ApiResponse(responseCode = "404", description = "Evento inexistente")
     @DeleteMapping("/{id}")
     ResponseEntity<Void> remover(
             @PathVariable Long id,
-            @RequestHeader(value = "X-Usuario-Id", required = false)
-            @Parameter(description = "Id do usuário solicitante. Só é checado se o evento não estiver em rascunho.")
-            Long solicitanteId) {
+            HttpSession session) {
+        long solicitanteId = SessaoUsuario.exigirId(session);
         removerEvento.remover(id, solicitanteId);
         return ResponseEntity.noContent().build();
     }

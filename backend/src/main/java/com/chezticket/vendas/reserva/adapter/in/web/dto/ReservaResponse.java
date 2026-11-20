@@ -7,6 +7,7 @@ import java.util.List;
 public record ReservaResponse(
         Long id,
         Long participanteId,
+        Long cupomId,
         List<ItemReservaResponse> itens,
         String status,
         LocalDateTime expiraEm,
@@ -16,6 +17,7 @@ public record ReservaResponse(
         return new ReservaResponse(
                 r.id(),
                 r.participanteId(),
+                r.cupomId(),
                 r.itens().stream().map(ItemReservaResponse::de).toList(),
                 r.status().name(),
                 r.expiraEm(),

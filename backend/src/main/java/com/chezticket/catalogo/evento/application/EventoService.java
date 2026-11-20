@@ -15,6 +15,7 @@ import com.chezticket.catalogo.evento.domain.Evento;
 import com.chezticket.catalogo.evento.domain.exception.EventoInvalidoException;
 import com.chezticket.catalogo.evento.domain.exception.EventoNaoEncontradoException;
 import com.chezticket.catalogo.evento.domain.exception.RemocaoNaoAutorizadaException;
+import java.util.Objects;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +50,9 @@ public class EventoService implements
                 comando.descricao(),
                 comando.classificacaoEtaria(),
                 comando.imagemCapa(),
+                comando.imagemDivulgacao(),
+                comando.tags(),
+                comando.redesSociais(),
                 comando.politicaReembolso());
         return repositorio.salvar(evento);
     }
@@ -103,7 +107,8 @@ public class EventoService implements
     @Override
     public void remover(Long eventoId, Long solicitanteId) {
         Evento evento = carregar(eventoId);
-        if (!evento.podeSerRemovido() && !verificarPapel.ehAdministrador(solicitanteId)) {
+        boolean eventoDoOrganizador = Objects.equals(evento.organizadorId(), solicitanteId);
+        if (!eventoDoOrganizador && !verificarPapel.ehAdministrador(solicitanteId)) {
             throw new RemocaoNaoAutorizadaException(eventoId, evento.status());
         }
         repositorio.remover(eventoId);

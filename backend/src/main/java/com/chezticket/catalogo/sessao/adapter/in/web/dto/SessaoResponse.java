@@ -7,11 +7,14 @@ public record SessaoResponse(
         Long id,
         Long eventoId,
         Long localId,
+        String endereco,
         LocalDateTime inicio,
         LocalDateTime fim,
         String status) {
 
     public static SessaoResponse de(Sessao s) {
-        return new SessaoResponse(s.id(), s.eventoId(), s.localId(), s.inicio(), s.fim(), s.status().name());
+        return new SessaoResponse(
+                s.id(), s.eventoId(), s.localId(), s.endereco(),
+                s.inicio(), s.fim(), s.status().name());
     }
 }
