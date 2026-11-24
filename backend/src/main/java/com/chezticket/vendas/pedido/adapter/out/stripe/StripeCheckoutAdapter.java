@@ -52,8 +52,8 @@ class StripeCheckoutAdapter implements CriarSessaoDeCheckoutPort {
 
         SessionCreateParams.Builder params = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)
-                .setSuccessUrl(frontendUrl + "/pedidos/" + solicitacao.pedidoId() + "/sucesso")
-                .setCancelUrl(frontendUrl + "/pedidos/" + solicitacao.pedidoId() + "/cancelado")
+                .setSuccessUrl(frontendUrl + "/#/pedido-sucesso?pedidoId=" + solicitacao.pedidoId())
+                .setCancelUrl(frontendUrl + "/#/pedido-cancelado?pedidoId=" + solicitacao.pedidoId())
                 .setExpiresAt(Instant.now().plus(validade).getEpochSecond())
                 .putMetadata("pedidoId", String.valueOf(solicitacao.pedidoId()));
 

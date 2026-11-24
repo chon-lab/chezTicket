@@ -1,6 +1,7 @@
 package com.chezticket.vendas.pedido.adapter.in.web;
 
 import com.chezticket.vendas.pedido.adapter.in.web.dto.CriarPedidoRequest;
+import com.chezticket.vendas.pedido.adapter.in.web.dto.IngressoResponse;
 import com.chezticket.vendas.pedido.adapter.in.web.dto.PedidoResponse;
 import com.chezticket.vendas.pedido.adapter.in.web.dto.ResultadoPedidoResponse;
 import com.chezticket.vendas.pedido.adapter.in.web.dto.SolicitarReembolsoRequest;
@@ -9,6 +10,7 @@ import com.chezticket.vendas.pedido.application.port.in.CriarPedidoUseCase;
 import com.chezticket.vendas.pedido.application.port.in.ResultadoPedido;
 import com.chezticket.vendas.pedido.application.port.in.SolicitarReembolsoUseCase;
 import com.chezticket.vendas.pedido.domain.Pedido;
+import com.chezticket.vendas.pedido.domain.exception.PedidoNaoEncontradoException;
 import com.chezticket.shared.web.SessaoAutenticacao;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -51,11 +53,34 @@ class PedidoController {
                 .toList();
     }
 
-    @Operation(summary = "Detalha um pedido")
-    @ApiResponse(responseCode = "404", description = "Pedido inexistente")
+    @Operation(summary = "Detalha um pedido", description = "Só o participante dono do pedido pode consultá-lo.")
+    @ApiResponse(responseCode = "401", description = "Sem sessão ativa")
+    @ApiResponse(responseCode = "404", description = "Pedido inexistente ou de outro participante")
     @GetMapping("/{id}")
-    PedidoResponse detalhar(@PathVariable Long id) {
-        return PedidoResponse.de(consultarPedido.buscarPorId(id));
+    PedidoResponse detalhar(@PathVariable Long id, HttpServletRequest httpRequest) {
+        Long participanteId = SessaoAutenticacao.usuarioIdObrigatorio(httpRequest);
+        return PedidoResponse.de(carregarDoParticipante(id, participanteId));
+    }
+
+    @Operation(summary = "Lista os ingressos emitidos para um pedido",
+            description = "Vazio enquanto o pagamento está pendente. Só o participante dono do pedido pode consultar.")
+    @ApiResponse(responseCode = "401", description = "Sem sessão ativa")
+    @ApiResponse(responseCode = "404", description = "Pedido inexistente ou de outro participante")
+    @GetMapping("/{id}/ingressos")
+    List<IngressoResponse> listarIngressos(@PathVariable Long id, HttpServletRequest httpRequest) {
+        Long participanteId = SessaoAutenticacao.usuarioIdObrigatorio(httpRequest);
+        carregarDoParticipante(id, participanteId);
+        return consultarPedido.listarIngressosDoPedido(id).stream()
+                .map(IngressoResponse::de)
+                .toList();
+    }
+
+    private Pedido carregarDoParticipante(Long id, Long participanteId) {
+        Pedido pedido = consultarPedido.buscarPorId(id);
+        if (!pedido.participanteId().equals(participanteId)) {
+            throw new PedidoNaoEncontradoException(id);
+        }
+        return pedido;
     }
 
     @Operation(summary = "Converte uma reserva ativa em pedido",

@@ -232,6 +232,16 @@ class PedidoServiceTest {
     }
 
     @Test
+    void deveListarIngressosDoPedido() {
+        Ingresso emitido = comId(Ingresso.emitir(900L, 1L, null), 1L);
+        when(ingressos.listarPorPedido(900L)).thenReturn(List.of(emitido));
+
+        List<Ingresso> resultado = service.listarIngressosDoPedido(900L);
+
+        assertThat(resultado).containsExactly(emitido);
+    }
+
+    @Test
     void deveReembolsarTotalmenteUmPedidoConcluidoEEstornarNoGateway() {
         Pedido concluido = pedidoConcluido(900L, 10L);
         Pagamento pagamento = pagamentoAprovado(5L, 900L, "pi_999", new BigDecimal("110.00"));
@@ -256,6 +266,24 @@ class PedidoServiceTest {
     }
 
     @Test
+    void deveCancelarOsIngressosEmitidosAoReembolsarTotalmente() {
+        Pedido concluido = pedidoConcluido(900L, 10L);
+        Pagamento pagamento = pagamentoAprovado(5L, 900L, "pi_999", new BigDecimal("110.00"));
+        Ingresso emitido = comId(Ingresso.emitir(900L, 1L, null), 1L);
+        when(pedidos.buscarPorId(900L)).thenReturn(Optional.of(concluido));
+        when(pagamentos.buscarPorPedidoId(900L)).thenReturn(Optional.of(pagamento));
+        when(pedidos.salvar(any(Pedido.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(ingressos.listarPorPedido(900L)).thenReturn(List.of(emitido));
+        when(ingressos.salvar(any(Ingresso.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.solicitarReembolso(900L, 4L, MotivoReembolso.DESISTENCIA, TipoReembolso.TOTAL, null);
+
+        ArgumentCaptor<Ingresso> ingressoCaptor = ArgumentCaptor.forClass(Ingresso.class);
+        verify(ingressos).salvar(ingressoCaptor.capture());
+        assertThat(ingressoCaptor.getValue().status().name()).isEqualTo("CANCELADO");
+    }
+
+    @Test
     void deveReembolsarParcialmenteRespeitandoOValorInformado() {
         Pedido concluido = pedidoConcluido(900L, 10L);
         Pagamento pagamento = pagamentoAprovado(5L, 900L, "pi_999", new BigDecimal("110.00"));
@@ -267,6 +295,7 @@ class PedidoServiceTest {
                 new BigDecimal("30.00"));
 
         verify(processarReembolsoNoGateway).reembolsar("pi_999", new BigDecimal("30.00"));
+        verify(ingressos, never()).listarPorPedido(any());
     }
 
     @Test

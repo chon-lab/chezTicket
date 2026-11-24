@@ -151,6 +151,12 @@ public class PedidoService implements
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<Ingresso> listarIngressosDoPedido(Long pedidoId) {
+        return ingressos.listarPorPedido(pedidoId);
+    }
+
+    @Override
     public ResultadoPedido confirmarPagamento(Long pedidoId, String idTransacaoStripe, MetodoPagamento metodo) {
         Pedido pedido = carregar(pedidoId);
         if (pedido.status() != StatusPedido.AGUARDANDO_PAGAMENTO) {
@@ -226,7 +232,18 @@ public class PedidoService implements
         pagamento.marcarEstornado();
         pagamentos.salvar(pagamento);
 
+        if (tipo == TipoReembolso.TOTAL) {
+            cancelarIngressos(pedidoId);
+        }
+
         return pedidos.salvar(pedido);
+    }
+
+    private void cancelarIngressos(Long pedidoId) {
+        for (Ingresso ingresso : ingressos.listarPorPedido(pedidoId)) {
+            ingresso.cancelar();
+            ingressos.salvar(ingresso);
+        }
     }
 
     private List<Ingresso> emitirIngressos(Pedido pedido) {
