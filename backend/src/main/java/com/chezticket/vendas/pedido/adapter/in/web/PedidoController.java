@@ -3,9 +3,12 @@ package com.chezticket.vendas.pedido.adapter.in.web;
 import com.chezticket.vendas.pedido.adapter.in.web.dto.CriarPedidoRequest;
 import com.chezticket.vendas.pedido.adapter.in.web.dto.PedidoResponse;
 import com.chezticket.vendas.pedido.adapter.in.web.dto.ResultadoPedidoResponse;
+import com.chezticket.vendas.pedido.adapter.in.web.dto.SolicitarReembolsoRequest;
 import com.chezticket.vendas.pedido.application.port.in.ConsultarPedidoUseCase;
 import com.chezticket.vendas.pedido.application.port.in.CriarPedidoUseCase;
 import com.chezticket.vendas.pedido.application.port.in.ResultadoPedido;
+import com.chezticket.vendas.pedido.application.port.in.SolicitarReembolsoUseCase;
+import com.chezticket.vendas.pedido.domain.Pedido;
 import com.chezticket.shared.web.SessaoAutenticacao;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -29,10 +32,13 @@ class PedidoController {
 
     private final CriarPedidoUseCase criarPedido;
     private final ConsultarPedidoUseCase consultarPedido;
+    private final SolicitarReembolsoUseCase solicitarReembolso;
 
-    PedidoController(CriarPedidoUseCase criarPedido, ConsultarPedidoUseCase consultarPedido) {
+    PedidoController(CriarPedidoUseCase criarPedido, ConsultarPedidoUseCase consultarPedido,
+            SolicitarReembolsoUseCase solicitarReembolso) {
         this.criarPedido = criarPedido;
         this.consultarPedido = consultarPedido;
+        this.solicitarReembolso = solicitarReembolso;
     }
 
     @Operation(summary = "Lista os pedidos do participante autenticado")
@@ -68,5 +74,21 @@ class PedidoController {
         return ResponseEntity
                 .created(URI.create("/api/pedidos/" + resultado.pedido().id()))
                 .body(ResultadoPedidoResponse.de(resultado));
+    }
+
+    @Operation(summary = "Solicita o reembolso de um pedido pago",
+            description = "Estorna a cobrança no Stripe e marca o pedido como REEMBOLSADO.")
+    @ApiResponse(responseCode = "200", description = "Reembolso processado")
+    @ApiResponse(responseCode = "401", description = "Sem sessão ativa")
+    @ApiResponse(responseCode = "404", description = "Pedido inexistente ou sem pagamento registrado")
+    @ApiResponse(responseCode = "409", description = "Pedido não está PAGO/CONCLUIDO, ou falha no gateway")
+    @ApiResponse(responseCode = "422", description = "Pedido não pertence ao participante, ou valor parcial inválido")
+    @PostMapping("/{id}/reembolso")
+    PedidoResponse solicitarReembolso(@PathVariable Long id, @Valid @RequestBody SolicitarReembolsoRequest request,
+            HttpServletRequest httpRequest) {
+        Long participanteId = SessaoAutenticacao.usuarioIdObrigatorio(httpRequest);
+        Pedido pedido = solicitarReembolso.solicitarReembolso(id, participanteId, request.motivo(), request.tipo(),
+                request.valor());
+        return PedidoResponse.de(pedido);
     }
 }

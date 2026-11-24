@@ -15,14 +15,20 @@ import com.chezticket.vendas.cupom.domain.Cupom;
 import com.chezticket.vendas.ingresso.application.port.out.IngressoRepositorio;
 import com.chezticket.vendas.ingresso.domain.Ingresso;
 import com.chezticket.vendas.pagamento.application.port.out.PagamentoRepositorio;
+import com.chezticket.vendas.pagamento.application.port.out.ReembolsoRepositorio;
 import com.chezticket.vendas.pagamento.domain.MetodoPagamento;
+import com.chezticket.vendas.pagamento.domain.MotivoReembolso;
 import com.chezticket.vendas.pagamento.domain.Pagamento;
+import com.chezticket.vendas.pagamento.domain.Reembolso;
+import com.chezticket.vendas.pagamento.domain.TipoReembolso;
+import com.chezticket.vendas.pagamento.domain.exception.PagamentoNaoEncontradoException;
 import com.chezticket.vendas.pedido.application.port.in.ConfirmarPagamentoUseCase;
 import com.chezticket.vendas.pedido.application.port.in.NovoPedido;
 import com.chezticket.vendas.pedido.application.port.in.ResultadoPedido;
 import com.chezticket.vendas.pedido.application.port.out.ConsultarTipoIngressoPort;
 import com.chezticket.vendas.pedido.application.port.out.CriarSessaoDeCheckoutPort;
 import com.chezticket.vendas.pedido.application.port.out.PedidoRepositorio;
+import com.chezticket.vendas.pedido.application.port.out.ProcessarReembolsoNoGatewayPort;
 import com.chezticket.vendas.pedido.application.port.out.ReservaParaPedidoPort;
 import com.chezticket.vendas.pedido.domain.Pedido;
 import com.chezticket.vendas.pedido.domain.StatusPedido;
@@ -56,6 +62,9 @@ class PedidoServiceTest {
     PagamentoRepositorio pagamentos;
 
     @Mock
+    ReembolsoRepositorio reembolsos;
+
+    @Mock
     ReservaParaPedidoPort reservas;
 
     @Mock
@@ -65,14 +74,17 @@ class PedidoServiceTest {
     CriarSessaoDeCheckoutPort criarCheckout;
 
     @Mock
+    ProcessarReembolsoNoGatewayPort processarReembolsoNoGateway;
+
+    @Mock
     ValidarCupomUseCase validarCupom;
 
     PedidoService service;
 
     @BeforeEach
     void setUp() {
-        service = new PedidoService(pedidos, ingressos, pagamentos, reservas, tiposIngresso, criarCheckout,
-                validarCupom);
+        service = new PedidoService(pedidos, ingressos, pagamentos, reembolsos, reservas, tiposIngresso,
+                criarCheckout, processarReembolsoNoGateway, validarCupom);
     }
 
     @Test
@@ -89,6 +101,7 @@ class PedidoServiceTest {
         assertThat(resultado.pedido().status()).isEqualTo(StatusPedido.CONCLUIDO);
         assertThat(resultado.ingressos()).hasSize(2);
         verify(reservas).converter(10L);
+        verify(reservas, never()).estenderExpiracao(any(), any());
         verify(criarCheckout, never()).criar(any());
         verify(pagamentos, never()).salvar(any());
     }
@@ -111,6 +124,7 @@ class PedidoServiceTest {
         assertThat(resultado.pedido().valorTaxa()).isEqualByComparingTo("10.00");
         assertThat(resultado.pedido().valorTotal()).isEqualByComparingTo("110.00");
         verify(reservas, never()).converter(any());
+        verify(reservas).estenderExpiracao(eq(10L), any(LocalDateTime.class));
     }
 
     @Test
@@ -217,6 +231,99 @@ class PedidoServiceTest {
         assertThatThrownBy(() -> service.buscarPorId(404L)).isInstanceOf(PedidoNaoEncontradoException.class);
     }
 
+    @Test
+    void deveReembolsarTotalmenteUmPedidoConcluidoEEstornarNoGateway() {
+        Pedido concluido = pedidoConcluido(900L, 10L);
+        Pagamento pagamento = pagamentoAprovado(5L, 900L, "pi_999", new BigDecimal("110.00"));
+        when(pedidos.buscarPorId(900L)).thenReturn(Optional.of(concluido));
+        when(pagamentos.buscarPorPedidoId(900L)).thenReturn(Optional.of(pagamento));
+        when(pedidos.salvar(any(Pedido.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Pedido reembolsado = service.solicitarReembolso(900L, 4L, MotivoReembolso.DESISTENCIA, TipoReembolso.TOTAL,
+                null);
+
+        assertThat(reembolsado.status()).isEqualTo(StatusPedido.REEMBOLSADO);
+        verify(processarReembolsoNoGateway).reembolsar("pi_999", new BigDecimal("110.00"));
+
+        ArgumentCaptor<Reembolso> reembolsoCaptor = ArgumentCaptor.forClass(Reembolso.class);
+        verify(reembolsos).salvar(reembolsoCaptor.capture());
+        assertThat(reembolsoCaptor.getValue().valor()).isEqualByComparingTo("110.00");
+        assertThat(reembolsoCaptor.getValue().status().name()).isEqualTo("PROCESSADO");
+
+        ArgumentCaptor<Pagamento> pagamentoCaptor = ArgumentCaptor.forClass(Pagamento.class);
+        verify(pagamentos).salvar(pagamentoCaptor.capture());
+        assertThat(pagamentoCaptor.getValue().status().name()).isEqualTo("ESTORNADO");
+    }
+
+    @Test
+    void deveReembolsarParcialmenteRespeitandoOValorInformado() {
+        Pedido concluido = pedidoConcluido(900L, 10L);
+        Pagamento pagamento = pagamentoAprovado(5L, 900L, "pi_999", new BigDecimal("110.00"));
+        when(pedidos.buscarPorId(900L)).thenReturn(Optional.of(concluido));
+        when(pagamentos.buscarPorPedidoId(900L)).thenReturn(Optional.of(pagamento));
+        when(pedidos.salvar(any(Pedido.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.solicitarReembolso(900L, 4L, MotivoReembolso.REMARCACAO, TipoReembolso.PARCIAL,
+                new BigDecimal("30.00"));
+
+        verify(processarReembolsoNoGateway).reembolsar("pi_999", new BigDecimal("30.00"));
+    }
+
+    @Test
+    void naoDeveReembolsarParcialAcimaDoValorPago() {
+        Pedido concluido = pedidoConcluido(900L, 10L);
+        Pagamento pagamento = pagamentoAprovado(5L, 900L, "pi_999", new BigDecimal("110.00"));
+        when(pedidos.buscarPorId(900L)).thenReturn(Optional.of(concluido));
+        when(pagamentos.buscarPorPedidoId(900L)).thenReturn(Optional.of(pagamento));
+
+        assertThatThrownBy(() -> service.solicitarReembolso(900L, 4L, MotivoReembolso.REMARCACAO,
+                TipoReembolso.PARCIAL, new BigDecimal("200.00")))
+                .isInstanceOf(PedidoInvalidoException.class);
+
+        verify(processarReembolsoNoGateway, never()).reembolsar(any(), any());
+        verify(reembolsos, never()).salvar(any());
+    }
+
+    @Test
+    void naoDeveReembolsarPedidoDeOutroParticipante() {
+        Pedido concluido = pedidoConcluido(900L, 10L);
+        when(pedidos.buscarPorId(900L)).thenReturn(Optional.of(concluido));
+
+        assertThatThrownBy(() -> service.solicitarReembolso(900L, 999L, MotivoReembolso.DESISTENCIA,
+                TipoReembolso.TOTAL, null))
+                .isInstanceOf(PedidoInvalidoException.class);
+
+        verify(pagamentos, never()).buscarPorPedidoId(any());
+        verify(processarReembolsoNoGateway, never()).reembolsar(any(), any());
+    }
+
+    @Test
+    void naoDeveReembolsarPedidoAindaAguardandoPagamento() {
+        Pedido pendente = pedidoPendente(900L, 10L,
+                new com.chezticket.vendas.pedido.domain.ItemPedido(1L, 2, new BigDecimal("50.00")));
+        when(pedidos.buscarPorId(900L)).thenReturn(Optional.of(pendente));
+
+        assertThatThrownBy(() -> service.solicitarReembolso(900L, 4L, MotivoReembolso.DESISTENCIA,
+                TipoReembolso.TOTAL, null))
+                .isInstanceOf(com.chezticket.vendas.pedido.domain.exception.TransicaoDeStatusDoPedidoInvalidaException.class);
+
+        verify(pagamentos, never()).buscarPorPedidoId(any());
+        verify(processarReembolsoNoGateway, never()).reembolsar(any(), any());
+    }
+
+    @Test
+    void naoDeveReembolsarSemPagamentoRegistrado() {
+        Pedido concluido = pedidoConcluido(900L, 10L);
+        when(pedidos.buscarPorId(900L)).thenReturn(Optional.of(concluido));
+        when(pagamentos.buscarPorPedidoId(900L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.solicitarReembolso(900L, 4L, MotivoReembolso.DESISTENCIA,
+                TipoReembolso.TOTAL, null))
+                .isInstanceOf(PagamentoNaoEncontradoException.class);
+
+        verify(processarReembolsoNoGateway, never()).reembolsar(any(), any());
+    }
+
     private static Reserva reservaAtiva(Long id, Long participanteId, ItemReserva... itens) {
         return Reserva.reconstituir(id, participanteId, List.of(itens), LocalDateTime.now().plusMinutes(10),
                 StatusReserva.ATIVA, LocalDateTime.now());
@@ -242,6 +349,12 @@ class PedidoServiceTest {
         pendente.confirmarPagamento();
         pendente.concluir();
         return pendente;
+    }
+
+    private static Pagamento pagamentoAprovado(Long id, Long pedidoId, String idTransacao, BigDecimal valor) {
+        Pagamento aprovado = Pagamento.aprovar(pedidoId, idTransacao, MetodoPagamento.CARTAO_CREDITO, valor);
+        return Pagamento.reconstituir(id, aprovado.pedidoId(), aprovado.idTransacao(), aprovado.metodo(),
+                aprovado.parcelas(), aprovado.valor(), aprovado.status(), aprovado.criadoEm());
     }
 
     private static Pedido comId(Pedido pedido, Long id) {

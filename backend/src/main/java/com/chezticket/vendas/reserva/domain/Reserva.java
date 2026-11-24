@@ -84,6 +84,21 @@ public class Reserva {
         this.status = StatusReserva.CONVERTIDA;
     }
 
+    /**
+     * Adia o prazo de expiração, nunca o antecipa. Usado pelo módulo de pedido ao abrir um
+     * checkout Stripe: a janela de pagamento do gateway (minutos) é bem maior que o prazo
+     * padrão de retenção de estoque, e sem isto o agendador que expira reservas vencidas
+     * (a cada 1 min) liberaria o estoque no meio de um pagamento ainda em andamento.
+     */
+    public void estenderExpiracao(LocalDateTime novaExpiracao) {
+        if (status != StatusReserva.ATIVA) {
+            throw new TransicaoDeStatusDaReservaInvalidaException(status, StatusReserva.ATIVA);
+        }
+        if (novaExpiracao != null && novaExpiracao.isAfter(expiraEm)) {
+            this.expiraEm = novaExpiracao;
+        }
+    }
+
     private static void exigir(boolean condicao, String mensagem) {
         if (!condicao) {
             throw new ReservaInvalidaException(mensagem);

@@ -10,6 +10,8 @@ import com.stripe.net.RequestOptions;
 import com.stripe.param.checkout.SessionCreateParams;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
+import java.time.Instant;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +26,9 @@ import org.springframework.stereotype.Component;
 class StripeCheckoutAdapter implements CriarSessaoDeCheckoutPort {
 
     private static final String MOEDA = "brl";
+
+    /** Mínimo que o Stripe aceita para {@code expires_at}, a partir da criação da sessão. */
+    private static final Duration VALIDADE_MINIMA = Duration.ofMinutes(30);
 
     private final String secretKey;
     private final String frontendUrl;
@@ -41,10 +46,15 @@ class StripeCheckoutAdapter implements CriarSessaoDeCheckoutPort {
                     "O pagamento online não está configurado no momento (chave do Stripe ausente).");
         }
 
+        Duration validade = solicitacao.validade() == null || solicitacao.validade().compareTo(VALIDADE_MINIMA) < 0
+                ? VALIDADE_MINIMA
+                : solicitacao.validade();
+
         SessionCreateParams.Builder params = SessionCreateParams.builder()
                 .setMode(SessionCreateParams.Mode.PAYMENT)
                 .setSuccessUrl(frontendUrl + "/pedidos/" + solicitacao.pedidoId() + "/sucesso")
                 .setCancelUrl(frontendUrl + "/pedidos/" + solicitacao.pedidoId() + "/cancelado")
+                .setExpiresAt(Instant.now().plus(validade).getEpochSecond())
                 .putMetadata("pedidoId", String.valueOf(solicitacao.pedidoId()));
 
         for (ItemDeCheckout item : solicitacao.itens()) {

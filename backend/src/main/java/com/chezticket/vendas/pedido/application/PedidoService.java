@@ -6,18 +6,25 @@ import com.chezticket.vendas.cupom.domain.Cupom;
 import com.chezticket.vendas.ingresso.application.port.out.IngressoRepositorio;
 import com.chezticket.vendas.ingresso.domain.Ingresso;
 import com.chezticket.vendas.pagamento.application.port.out.PagamentoRepositorio;
+import com.chezticket.vendas.pagamento.application.port.out.ReembolsoRepositorio;
 import com.chezticket.vendas.pagamento.domain.MetodoPagamento;
+import com.chezticket.vendas.pagamento.domain.MotivoReembolso;
 import com.chezticket.vendas.pagamento.domain.Pagamento;
+import com.chezticket.vendas.pagamento.domain.Reembolso;
+import com.chezticket.vendas.pagamento.domain.TipoReembolso;
+import com.chezticket.vendas.pagamento.domain.exception.PagamentoNaoEncontradoException;
 import com.chezticket.vendas.pedido.application.port.in.CancelarPedidoUseCase;
 import com.chezticket.vendas.pedido.application.port.in.ConfirmarPagamentoUseCase;
 import com.chezticket.vendas.pedido.application.port.in.ConsultarPedidoUseCase;
 import com.chezticket.vendas.pedido.application.port.in.CriarPedidoUseCase;
 import com.chezticket.vendas.pedido.application.port.in.NovoPedido;
 import com.chezticket.vendas.pedido.application.port.in.ResultadoPedido;
+import com.chezticket.vendas.pedido.application.port.in.SolicitarReembolsoUseCase;
 import com.chezticket.vendas.pedido.application.port.out.ConsultarTipoIngressoPort;
 import com.chezticket.vendas.pedido.application.port.out.CriarSessaoDeCheckoutPort;
 import com.chezticket.vendas.pedido.application.port.out.ItemDeCheckout;
 import com.chezticket.vendas.pedido.application.port.out.PedidoRepositorio;
+import com.chezticket.vendas.pedido.application.port.out.ProcessarReembolsoNoGatewayPort;
 import com.chezticket.vendas.pedido.application.port.out.ReservaParaPedidoPort;
 import com.chezticket.vendas.pedido.application.port.out.SolicitacaoDeCheckout;
 import com.chezticket.vendas.pedido.domain.ItemPedido;
@@ -29,6 +36,8 @@ import com.chezticket.vendas.reserva.domain.ItemReserva;
 import com.chezticket.vendas.reserva.domain.Reserva;
 import com.chezticket.vendas.reserva.domain.StatusReserva;
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -40,25 +49,39 @@ public class PedidoService implements
         CriarPedidoUseCase,
         ConsultarPedidoUseCase,
         ConfirmarPagamentoUseCase,
-        CancelarPedidoUseCase {
+        CancelarPedidoUseCase,
+        SolicitarReembolsoUseCase {
+
+    /**
+     * Quanto tempo o pagamento pode ficar em aberto no Stripe Checkout. Maior que o prazo
+     * padrão de retenção da reserva (10 min) — a reserva é adiada para esta mesma janela ao
+     * abrir o checkout, senão o agendador de expiração correria com o pagamento ainda em
+     * andamento (ver {@code Reserva.estenderExpiracao}).
+     */
+    static final Duration JANELA_DE_PAGAMENTO = Duration.ofMinutes(35);
 
     private final PedidoRepositorio pedidos;
     private final IngressoRepositorio ingressos;
     private final PagamentoRepositorio pagamentos;
+    private final ReembolsoRepositorio reembolsos;
     private final ReservaParaPedidoPort reservas;
     private final ConsultarTipoIngressoPort tiposIngresso;
     private final CriarSessaoDeCheckoutPort criarCheckout;
+    private final ProcessarReembolsoNoGatewayPort processarReembolsoNoGateway;
     private final ValidarCupomUseCase validarCupom;
 
     public PedidoService(PedidoRepositorio pedidos, IngressoRepositorio ingressos, PagamentoRepositorio pagamentos,
-            ReservaParaPedidoPort reservas, ConsultarTipoIngressoPort tiposIngresso,
-            CriarSessaoDeCheckoutPort criarCheckout, ValidarCupomUseCase validarCupom) {
+            ReembolsoRepositorio reembolsos, ReservaParaPedidoPort reservas, ConsultarTipoIngressoPort tiposIngresso,
+            CriarSessaoDeCheckoutPort criarCheckout, ProcessarReembolsoNoGatewayPort processarReembolsoNoGateway,
+            ValidarCupomUseCase validarCupom) {
         this.pedidos = pedidos;
         this.ingressos = ingressos;
         this.pagamentos = pagamentos;
+        this.reembolsos = reembolsos;
         this.reservas = reservas;
         this.tiposIngresso = tiposIngresso;
         this.criarCheckout = criarCheckout;
+        this.processarReembolsoNoGateway = processarReembolsoNoGateway;
         this.validarCupom = validarCupom;
     }
 
@@ -100,7 +123,9 @@ public class PedidoService implements
             return concluirSemCobranca(pedido);
         }
 
-        String checkoutUrl = criarCheckout.criar(new SolicitacaoDeCheckout(pedido.id(), itensCheckout, valorTaxa));
+        reservas.estenderExpiracao(reserva.id(), LocalDateTime.now().plus(JANELA_DE_PAGAMENTO));
+        String checkoutUrl = criarCheckout.criar(
+                new SolicitacaoDeCheckout(pedido.id(), itensCheckout, valorTaxa, JANELA_DE_PAGAMENTO));
         return new ResultadoPedido(pedido, checkoutUrl, List.of());
     }
 
@@ -169,6 +194,39 @@ public class PedidoService implements
             reservas.cancelar(pedido.reservaId());
         }
         return pedido;
+    }
+
+    @Override
+    public Pedido solicitarReembolso(Long pedidoId, Long participanteId, MotivoReembolso motivo, TipoReembolso tipo,
+            BigDecimal valor) {
+        Pedido pedido = carregar(pedidoId);
+        if (!pedido.participanteId().equals(participanteId)) {
+            throw new PedidoInvalidoException("O pedido não pertence ao participante.");
+        }
+        // Valida a transição de status (só PAGO/CONCLUIDO podem ser reembolsados) antes de
+        // chamar o gateway ou persistir qualquer coisa — falhar aqui não deve ter efeito colateral.
+        pedido.marcarReembolsado();
+
+        Pagamento pagamento = pagamentos.buscarPorPedidoId(pedidoId)
+                .orElseThrow(() -> new PagamentoNaoEncontradoException(pedidoId));
+
+        BigDecimal valorAEstornar = tipo == TipoReembolso.TOTAL ? pagamento.valor() : valor;
+        if (tipo == TipoReembolso.PARCIAL
+                && (valorAEstornar == null || valorAEstornar.compareTo(pagamento.valor()) > 0)) {
+            throw new PedidoInvalidoException(
+                    "O valor do reembolso parcial não pode exceder o valor pago (" + pagamento.valor() + ").");
+        }
+
+        processarReembolsoNoGateway.reembolsar(pagamento.idTransacao(), valorAEstornar);
+
+        Reembolso reembolso = Reembolso.solicitar(pagamento.id(), motivo, tipo, valorAEstornar);
+        reembolso.processar();
+        reembolsos.salvar(reembolso);
+
+        pagamento.marcarEstornado();
+        pagamentos.salvar(pagamento);
+
+        return pedidos.salvar(pedido);
     }
 
     private List<Ingresso> emitirIngressos(Pedido pedido) {

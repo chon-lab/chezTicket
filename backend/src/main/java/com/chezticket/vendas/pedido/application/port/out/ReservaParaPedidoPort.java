@@ -1,6 +1,7 @@
 package com.chezticket.vendas.pedido.application.port.out;
 
 import com.chezticket.vendas.reserva.domain.Reserva;
+import java.time.LocalDateTime;
 
 /**
  * Porta de saída: liga o módulo de pedido ao módulo de reserva, reusando os casos de uso
@@ -16,4 +17,11 @@ public interface ReservaParaPedidoPort {
 
     /** Cancela a reserva, liberando o estoque retido. Chamado quando o pagamento falha/expira. */
     Reserva cancelar(Long reservaId);
+
+    /**
+     * Adia o prazo de expiração da reserva para cobrir a janela de pagamento do checkout —
+     * sem isto, o agendador que libera estoque de reservas vencidas (a cada 1 min) correria
+     * com um checkout Stripe ainda em aberto.
+     */
+    Reserva estenderExpiracao(Long reservaId, LocalDateTime novaExpiracao);
 }

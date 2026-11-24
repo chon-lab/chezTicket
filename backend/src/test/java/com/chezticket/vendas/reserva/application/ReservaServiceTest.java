@@ -88,6 +88,18 @@ class ReservaServiceTest {
     }
 
     @Test
+    void deveEstenderAExpiracaoDeUmaReservaAtiva() {
+        Reserva reserva = comId(Reserva.criar(4L, List.of(new ItemReserva(1L, 2)), Duration.ofMinutes(10)), 1L);
+        LocalDateTime novaExpiracao = reserva.expiraEm().plusMinutes(25);
+        when(repositorio.buscarPorId(1L)).thenReturn(Optional.of(reserva));
+        when(repositorio.salvar(any(Reserva.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Reserva estendida = service.estenderExpiracao(1L, novaExpiracao);
+
+        assertThat(estendida.expiraEm()).isEqualTo(novaExpiracao);
+    }
+
+    @Test
     void deveCancelarELiberarEstoqueDeTodosOsItens() {
         Reserva reserva = Reserva.criar(4L, List.of(new ItemReserva(1L, 2), new ItemReserva(2L, 1)),
                 Duration.ofMinutes(10));

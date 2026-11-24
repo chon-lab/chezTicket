@@ -4,7 +4,9 @@ import com.chezticket.vendas.pedido.application.port.out.ReservaParaPedidoPort;
 import com.chezticket.vendas.reserva.application.port.in.CancelarReservaUseCase;
 import com.chezticket.vendas.reserva.application.port.in.ConsultarReservasUseCase;
 import com.chezticket.vendas.reserva.application.port.in.ConverterReservaUseCase;
+import com.chezticket.vendas.reserva.application.port.in.EstenderReservaUseCase;
 import com.chezticket.vendas.reserva.domain.Reserva;
+import java.time.LocalDateTime;
 import org.springframework.stereotype.Component;
 
 /**
@@ -18,12 +20,14 @@ class ReservaParaPedidoAdapter implements ReservaParaPedidoPort {
     private final ConsultarReservasUseCase consultarReservas;
     private final ConverterReservaUseCase converterReserva;
     private final CancelarReservaUseCase cancelarReserva;
+    private final EstenderReservaUseCase estenderReserva;
 
     ReservaParaPedidoAdapter(ConsultarReservasUseCase consultarReservas, ConverterReservaUseCase converterReserva,
-            CancelarReservaUseCase cancelarReserva) {
+            CancelarReservaUseCase cancelarReserva, EstenderReservaUseCase estenderReserva) {
         this.consultarReservas = consultarReservas;
         this.converterReserva = converterReserva;
         this.cancelarReserva = cancelarReserva;
+        this.estenderReserva = estenderReserva;
     }
 
     @Override
@@ -39,5 +43,10 @@ class ReservaParaPedidoAdapter implements ReservaParaPedidoPort {
     @Override
     public Reserva cancelar(Long reservaId) {
         return cancelarReserva.cancelar(reservaId);
+    }
+
+    @Override
+    public Reserva estenderExpiracao(Long reservaId, LocalDateTime novaExpiracao) {
+        return estenderReserva.estenderExpiracao(reservaId, novaExpiracao);
     }
 }

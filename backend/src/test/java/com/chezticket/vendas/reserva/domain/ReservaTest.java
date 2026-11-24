@@ -85,6 +85,35 @@ class ReservaTest {
         assertThatThrownBy(reserva::cancelar).isInstanceOf(TransicaoDeStatusDaReservaInvalidaException.class);
     }
 
+    @Test
+    void deveAdiarAExpiracaoDeUmaReservaAtiva() {
+        Reserva reserva = Reserva.criar(4L, umItem, Duration.ofMinutes(10));
+        java.time.LocalDateTime novaExpiracao = reserva.expiraEm().plusMinutes(25);
+
+        reserva.estenderExpiracao(novaExpiracao);
+
+        assertThat(reserva.expiraEm()).isEqualTo(novaExpiracao);
+    }
+
+    @Test
+    void naoDeveAntecipaAExpiracaoAoEstender() {
+        Reserva reserva = Reserva.criar(4L, umItem, Duration.ofMinutes(10));
+        java.time.LocalDateTime expiracaoOriginal = reserva.expiraEm();
+
+        reserva.estenderExpiracao(expiracaoOriginal.minusMinutes(5));
+
+        assertThat(reserva.expiraEm()).isEqualTo(expiracaoOriginal);
+    }
+
+    @Test
+    void naoDeveEstenderUmaReservaQueNaoEstaAtiva() {
+        Reserva reserva = Reserva.criar(4L, umItem, Duration.ofMinutes(10));
+        reserva.cancelar();
+
+        assertThatThrownBy(() -> reserva.estenderExpiracao(reserva.expiraEm().plusMinutes(10)))
+                .isInstanceOf(TransicaoDeStatusDaReservaInvalidaException.class);
+    }
+
     private static void await10Millis() {
         try {
             Thread.sleep(10);
