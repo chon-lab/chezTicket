@@ -19,7 +19,8 @@ WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/* \
-    && groupadd --system spring && useradd --system --gid spring spring
+    && groupadd --system spring && useradd --system --gid spring spring \
+    && mkdir -p /app/uploads && chown -R spring:spring /app
 
 USER spring:spring
 COPY --from=build /workspace/target/*.jar app.jar

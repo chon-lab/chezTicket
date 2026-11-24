@@ -56,7 +56,7 @@ class EventoServiceTest {
 
     private Evento rascunhoExistente() {
         return Evento.reconstituir(1L, 2L, 1L, "Festival", "Descricao do evento", ClassificacaoEtaria.LIVRE,
-                null, StatusEvento.RASCUNHO, PoliticaReembolso.PADRAO, null,
+                null, null, null, null, StatusEvento.RASCUNHO, PoliticaReembolso.PADRAO, null,
                 LocalDateTime.now(), LocalDateTime.now());
     }
 
@@ -65,7 +65,8 @@ class EventoServiceTest {
         when(verificarCategoria.categoriaExiste(1L)).thenReturn(true);
         when(repositorio.salvar(any(Evento.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Evento evento = service.criar(new NovoEvento(2L, 1L, "Festival de Inverno", "Desc", null, null, null));
+        Evento evento = service.criar(
+                new NovoEvento(2L, 1L, "Festival de Inverno", "Desc", null, null, null, null, null, null));
 
         assertThat(evento.status()).isEqualTo(StatusEvento.RASCUNHO);
         verify(repositorio).salvar(any(Evento.class));
@@ -76,7 +77,7 @@ class EventoServiceTest {
         when(verificarCategoria.categoriaExiste(99L)).thenReturn(false);
 
         assertThatThrownBy(() -> service.criar(
-                new NovoEvento(2L, 99L, "Festival de Inverno", "Desc", null, null, null)))
+                new NovoEvento(2L, 99L, "Festival de Inverno", "Desc", null, null, null, null, null, null)))
                 .isInstanceOf(EventoInvalidoException.class);
 
         verify(repositorio, never()).salvar(any());
@@ -108,7 +109,7 @@ class EventoServiceTest {
         when(repositorio.salvar(any(Evento.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Evento atualizado = service.atualizar(1L,
-                new DadosEvento(6L, "Novo Titulo do Evento", "Nova descricao", null, null, null));
+                new DadosEvento(6L, "Novo Titulo do Evento", "Nova descricao", null, null, null, null, null, null));
 
         assertThat(atualizado.categoriaId()).isEqualTo(6L);
         assertThat(atualizado.titulo()).isEqualTo("Novo Titulo do Evento");
@@ -121,7 +122,7 @@ class EventoServiceTest {
         when(verificarCategoria.categoriaExiste(99L)).thenReturn(false);
 
         assertThatThrownBy(() -> service.atualizar(1L,
-                new DadosEvento(99L, "Titulo Valido", "desc", null, null, null)))
+                new DadosEvento(99L, "Titulo Valido", "desc", null, null, null, null, null, null)))
                 .isInstanceOf(EventoInvalidoException.class);
 
         verify(repositorio, never()).salvar(any());

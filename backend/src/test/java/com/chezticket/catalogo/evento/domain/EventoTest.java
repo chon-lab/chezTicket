@@ -5,18 +5,22 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.chezticket.catalogo.evento.domain.exception.EventoInvalidoException;
 import com.chezticket.catalogo.evento.domain.exception.TransicaoDeStatusInvalidaException;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class EventoTest {
 
     private Evento rascunhoValido() {
         return Evento.criarRascunho(2L, 1L, "Festival de Inverno",
-                "Shows e oficinas no campus.", ClassificacaoEtaria.LIVRE, null, PoliticaReembolso.PADRAO);
+                "Shows e oficinas no campus.", ClassificacaoEtaria.LIVRE, null, null, PoliticaReembolso.PADRAO,
+                null, null);
     }
 
     @Test
     void deveNascerComoRascunhoComPadroesAplicados() {
-        Evento evento = Evento.criarRascunho(2L, 1L, "  Mostra   de Curtas ", null, null, null, null);
+        Evento evento = Evento.criarRascunho(2L, 1L, "  Mostra   de Curtas ", null, null, null, null, null,
+                null, null);
 
         assertThat(evento.status()).isEqualTo(StatusEvento.RASCUNHO);
         assertThat(evento.titulo()).isEqualTo("Mostra de Curtas");
@@ -24,19 +28,32 @@ class EventoTest {
         assertThat(evento.politicaReembolso()).isEqualTo(PoliticaReembolso.PADRAO);
         assertThat(evento.dataPublicacao()).isNull();
         assertThat(evento.podeSerRemovido()).isTrue();
+        assertThat(evento.tags()).isEmpty();
+        assertThat(evento.redesSociais()).isEmpty();
+    }
+
+    @Test
+    void deveGuardarTagsERedesSociaisNormalizadas() {
+        Evento evento = Evento.criarRascunho(2L, 1L, "Festival", "Desc", null, null, null, null,
+                List.of(" Tecnologia ", "", "ao vivo"),
+                Map.of("instagram", " https://instagram.com/chezticket ", "facebook", "  "));
+
+        assertThat(evento.tags()).containsExactly("Tecnologia", "ao vivo");
+        assertThat(evento.redesSociais()).containsExactly(
+                Map.entry("instagram", "https://instagram.com/chezticket"));
     }
 
     @Test
     void naoDeveCriarSemOrganizadorOuCategoria() {
-        assertThatThrownBy(() -> Evento.criarRascunho(null, 1L, "X Y Z", null, null, null, null))
+        assertThatThrownBy(() -> Evento.criarRascunho(null, 1L, "X Y Z", null, null, null, null, null, null, null))
                 .isInstanceOf(EventoInvalidoException.class);
-        assertThatThrownBy(() -> Evento.criarRascunho(2L, null, "X Y Z", null, null, null, null))
+        assertThatThrownBy(() -> Evento.criarRascunho(2L, null, "X Y Z", null, null, null, null, null, null, null))
                 .isInstanceOf(EventoInvalidoException.class);
     }
 
     @Test
     void naoDeveCriarComTituloCurto() {
-        assertThatThrownBy(() -> Evento.criarRascunho(2L, 1L, "ab", null, null, null, null))
+        assertThatThrownBy(() -> Evento.criarRascunho(2L, 1L, "ab", null, null, null, null, null, null, null))
                 .isInstanceOf(EventoInvalidoException.class);
     }
 
@@ -53,7 +70,7 @@ class EventoTest {
 
     @Test
     void naoDevePublicarSemDescricao() {
-        Evento evento = Evento.criarRascunho(2L, 1L, "Evento Sem Texto", null, null, null, null);
+        Evento evento = Evento.criarRascunho(2L, 1L, "Evento Sem Texto", null, null, null, null, null, null, null);
 
         assertThatThrownBy(evento::publicar).isInstanceOf(EventoInvalidoException.class);
     }
@@ -83,7 +100,7 @@ class EventoTest {
         Evento evento = rascunhoValido();
         evento.cancelar();
 
-        assertThatThrownBy(() -> evento.atualizarDados(1L, "Novo Titulo", "nova", null, null, null))
+        assertThatThrownBy(() -> evento.atualizarDados(1L, "Novo Titulo", "nova", null, null, null, null, null, null))
                 .isInstanceOf(EventoInvalidoException.class);
     }
 

@@ -40,6 +40,15 @@ class EventoJpaEntity {
     @Column(name = "imagem_capa", length = 255)
     private String imagemCapa;
 
+    @Column(name = "imagem_divulgacao", length = 255)
+    private String imagemDivulgacao;
+
+    @Column(columnDefinition = "text")
+    private String tags;
+
+    @Column(name = "redes_sociais", columnDefinition = "text")
+    private String redesSociais;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private StatusEvento status;
@@ -61,9 +70,9 @@ class EventoJpaEntity {
     }
 
     EventoJpaEntity(Long id, Long organizadorId, Long categoriaId, String titulo, String descricao,
-            ClassificacaoEtaria classificacaoEtaria, String imagemCapa, StatusEvento status,
-            PoliticaReembolso politicaReembolso, LocalDateTime dataPublicacao, LocalDateTime criadoEm,
-            LocalDateTime atualizadoEm) {
+            ClassificacaoEtaria classificacaoEtaria, String imagemCapa, String imagemDivulgacao, String tags,
+            String redesSociais, StatusEvento status, PoliticaReembolso politicaReembolso,
+            LocalDateTime dataPublicacao, LocalDateTime criadoEm, LocalDateTime atualizadoEm) {
         this.id = id;
         this.organizadorId = organizadorId;
         this.categoriaId = categoriaId;
@@ -71,6 +80,9 @@ class EventoJpaEntity {
         this.descricao = descricao;
         this.classificacaoEtaria = classificacaoEtaria;
         this.imagemCapa = imagemCapa;
+        this.imagemDivulgacao = imagemDivulgacao;
+        this.tags = tags;
+        this.redesSociais = redesSociais;
         this.status = status;
         this.politicaReembolso = politicaReembolso;
         this.dataPublicacao = dataPublicacao;
@@ -104,6 +116,18 @@ class EventoJpaEntity {
 
     String getImagemCapa() {
         return imagemCapa;
+    }
+
+    String getImagemDivulgacao() {
+        return imagemDivulgacao;
+    }
+
+    String getTags() {
+        return tags;
+    }
+
+    String getRedesSociais() {
+        return redesSociais;
     }
 
     StatusEvento getStatus() {

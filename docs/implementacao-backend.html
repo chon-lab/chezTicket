@@ -331,7 +331,7 @@
       <span class="chip"><b>Java</b> 17</span>
       <span class="chip"><b>Spring Boot</b> 3.3.5</span>
       <span class="chip"><b>Banco</b> MariaDB 11 + Flyway</span>
-      <span class="chip"><b>Atualizado</b> 01/11/2026</span>
+      <span class="chip"><b>Atualizado</b> 24/11/2026</span>
     </div>
   </header>
 
@@ -497,14 +497,14 @@ stateDiagram-v2
         10 minutos (<code>ReservaService.DURACAO_DA_RESERVA</code>). Se a reserva não virar pedido
         até lá — módulo de Pedido/Pagamento é Fase 5, Stripe — ela expira sozinha: um
         <code>@Scheduled</code> varre reservas vencidas a cada minuto e libera o estoque retido.
-        Participante é checado pela tabela <code>participante</code> (sem autenticação ainda — use o
-        <code>participanteId=4</code> do seed de demonstração, V4).
+        Desde a integração com o front real (abaixo), o participante é o usuário da sessão
+        autenticada, não mais um id solto na requisição.
       </p>
       <div class="overflow-x">
       <table class="spec">
         <thead><tr><th>Método</th><th>Rota</th><th>Ação</th></tr></thead>
         <tbody>
-          <tr><td><code>GET</code></td><td><code>/api/reservas?participanteId=</code></td><td>lista as reservas de um participante</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/reservas</code></td><td>lista as reservas do participante autenticado</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/reservas/{id}</code></td><td>detalha</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/reservas</code></td><td>reserva um ou mais tipos de ingresso → <code>409</code> se faltar estoque</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/reservas/{id}/cancelamento</code></td><td>cancela e libera o estoque na hora</td></tr>
@@ -512,6 +512,82 @@ stateDiagram-v2
       </table>
       </div>
 
+      <h3>Integração com o front real</h3>
+      <p class="prose">
+        O front (<code>chezTicket-Front</code>, repositório separado) já tinha as telas e os tipos
+        de API prontos, construídos assumindo um backend mais rico do que o que existia até aqui.
+        Em vez de simplificar o front, o backend foi estendido para bater com o contrato que ele já
+        esperava — por isso <strong>nenhum arquivo do front precisou mudar</strong>.
+      </p>
+
+      <h4><code>identidade/conta</code> — autenticação simples por sessão</h4>
+      <p class="prose">
+        Sem JWT: sessão de servlet (cookie <code>JSESSIONID</code>), senha com BCrypt
+        (<code>spring-security-crypto</code>, sem puxar o Spring Security inteiro). Toda conta
+        cadastrada vira <code>participante</code> <em>e</em> <code>organizador</code> ao mesmo
+        tempo — o formulário de cadastro não distingue os dois, e o front já usa
+        <code>user.id</code> como <code>organizadorId</code> ao criar um evento.
+      </p>
+      <div class="overflow-x">
+      <table class="spec">
+        <thead><tr><th>Método</th><th>Rota</th><th>Ação</th></tr></thead>
+        <tbody>
+          <tr><td><code>POST</code></td><td><code>/api/auth/cadastro</code></td><td>cria usuário + participante + organizador, já autentica</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/auth/login</code></td><td>autentica → <code>401</code> com mensagem genérica se inválido</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/auth/logout</code></td><td>invalida a sessão</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/auth/me</code></td><td>dados da sessão atual → <code>401</code> sem sessão</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h4><code>identidade/perfil</code> — visão agregada do usuário</h4>
+      <p class="prose">
+        <code>GET /api/perfil</code> junta, numa chamada só: dados do usuário, eventos que ele
+        organiza (<code>Evento</code> → primeira <code>Sessao</code> → <code>Local</code>/endereço)
+        e suas reservas achatadas por item (<code>Reserva</code> → <code>ItemReserva</code> →
+        <code>TipoIngresso</code> → <code>Sessao</code> → <code>Evento</code>). É leitura pura —
+        nenhuma tabela nova, só composição de portas de saída de outros módulos.
+      </p>
+
+      <h4><code>vendas/cupom</code> — um cupom por evento</h4>
+      <p class="prose">
+        Modelo simplificado: o esquema original trata cupom como entidade reutilizável com limite
+        de usos, resgatada num <code>Pedido</code> que não existe ainda. Como o front cria o cupom
+        junto com o evento (tela "Divulgações"), cada cupom pertence a um único evento, com
+        desconto percentual e validade — sem limite de usos. O desconto é calculado no front (a
+        reserva não carrega valor monetário); o backend só confirma que o código é válido.
+      </p>
+      <div class="overflow-x">
+      <table class="spec">
+        <thead><tr><th>Método</th><th>Rota</th><th>Ação</th></tr></thead>
+        <tbody>
+          <tr><td><code>POST</code></td><td><code>/api/cupons/validacao</code></td><td>{"{"}eventoId, codigo{"}"} → cupom ou <code>404</code>/<code>409</code> (expirado)</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h4>Upload de imagem</h4>
+      <p class="prose">
+        Arquivos enviados (capa/divulgação de evento) são salvos em disco local
+        (<code>chezticket.uploads-dir</code>, montado como volume no Docker) com nome aleatório —
+        a extensão original é validada contra uma lista estrita antes de compor o caminho, para não
+        permitir um nome de arquivo forjado escapar do diretório. Servidos em
+        <code>/api/uploads/**</code>; a URL devolvida é relativa em dev (passa pelo proxy do Vite) e
+        absoluta em produção, se <code>CHEZTICKET_PUBLIC_API_URL</code> estiver configurada.
+      </p>
+
+      <h4><code>catalogo/eventocompleto</code> — o assistente de criação numa chamada só</h4>
+      <p class="prose">
+        <code>POST /api/eventos/completo</code> (multipart: parte <code>dados</code> em JSON +
+        <code>imagemCapa</code>/<code>imagemDivulgacao</code> opcionais) orquestra, numa
+        transação só, o que as 4 telas do assistente de criação fazem: evento (com
+        <code>tags</code>/<code>redesSociais</code>/imagem de divulgação) + sessão (endereço livre,
+        sem exigir um <code>Local</code> estruturado) + tipos de ingresso (com janela de vendas
+        opcional) + cupom opcional, publicando ao final se pedido. Internamente, chama os mesmos
+        casos de uso que <code>/api/eventos</code>, <code>/api/sessoes</code>,
+        <code>/api/tipos-ingresso</code> e <code>/api/cupons</code> já expunham — nenhuma regra
+        duplicada, só composição.
+      </p>
     </section>
 
     <!-- 3 -->
@@ -568,7 +644,9 @@ stateDiagram-v2
         O schema tem <strong>18 tabelas</strong>: as 17 originais da modelagem UML (sem
         <code>setor</code>/<code>lote</code>/<code>checkin</code>, removidos do modelo depois da
         primeira versão) mais <code>item_reserva</code>, acrescentada em V4 para guardar os itens de
-        cada reserva (a modelagem original não detalhava essa relação):
+        cada reserva (a modelagem original não detalhava essa relação). V5 estende campos de
+        <code>evento</code>/<code>sessao</code>/<code>tipo_ingresso</code>/<code>cupom</code> para o
+        front real (ver módulos abaixo) sem criar tabela nova:
       </p>
       <pre class="code">usuario, participante, organizador, administrador,
 categoria, local, evento, sessao, tipo_ingresso, cupom,
@@ -586,6 +664,10 @@ reserva, item_reserva, pedido, item_pedido, pagamento, reembolso, ingresso, repa
             em <code>tipo_ingresso</code> (bloqueio otimista), tabela <code>item_reserva</code>, e um
             participante de demonstração (<code>usuario_id=4</code>) para testar <code>/api/reservas</code>
             pelo Swagger</td></tr>
+          <tr><th scope="row"><code>V5</code></th><td>Integração com o front real: <code>evento.tags</code>/
+            <code>redes_sociais</code>/<code>imagem_divulgacao</code>, <code>sessao.endereco</code>
+            (+ <code>local_id</code> agora opcional), <code>tipo_ingresso.inicio_vendas</code>/
+            <code>fim_vendas</code>, <code>cupom.evento_id</code></td></tr>
         </tbody>
       </table>
 
@@ -637,19 +719,26 @@ mvn verify   # tudo, incluindo os *IT — requer Docker</pre>
     <section id="proximos">
       <h2>Próximos passos — Fase 5: Integração de Pagamentos (Stripe)</h2>
       <p class="prose">
-        Módulo de Ingressos (Fase 4 do cronograma) concluído: <code>Local</code>, <code>Sessao</code>,
-        <code>TipoIngresso</code> e o fluxo de reserva (<code>vendas/reserva</code>). O que falta é
+        Módulo de Ingressos (Fase 4) concluído, e o backend agora bate com o contrato que o front
+        real (<code>chezTicket-Front</code>) já esperava: autenticação, perfil agregado, cupom,
+        upload de imagem e o assistente de criação de evento numa chamada só. O que falta é
         justamente o que a Fase 5 descreve:
       </p>
       <ol class="plain">
         <li><code>Pedido</code>/<code>ItemPedido</code>: converte uma <code>Reserva</code> ATIVA em
-          pedido (hoje a reserva só expira ou é cancelada — não existe o próximo passo da compra).</li>
+          pedido (hoje a reserva só expira ou é cancelada — não existe o próximo passo da compra;
+          a tela de pagamento do front já avisa isso: "reserva sem cobrança online").</li>
         <li>Integração com Stripe (checkout e webhooks) e emissão de ingresso/QR Code após
           confirmação de pagamento.</li>
         <li>Tratamento de falhas, estornos e reembolsos.</li>
         <li>Fluxo de inscrição para eventos gratuitos (sem pagamento, só emissão direta).</li>
       </ol>
-      <p class="prose">Fora do backend: front-end (React) ainda não iniciado.</p>
+      <p class="prose">
+        Simplificações deliberadas, documentadas para revisitar se o escopo crescer: autenticação
+        sem JWT/refresh-token; cupom sem limite de usos e sem tipo <code>VALOR_FIXO</code>; upload
+        local sem validação de tipo de conteúdo; sem geração de preview (Open Graph) da imagem de
+        divulgação para redes sociais.
+      </p>
     </section>
   </main>
 

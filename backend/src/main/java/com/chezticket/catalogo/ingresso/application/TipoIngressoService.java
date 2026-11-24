@@ -44,7 +44,9 @@ public class TipoIngressoService implements
                 comando.preco(),
                 comando.taxaServico(),
                 comando.quantidadeTotal(),
-                comando.limitePorCompra());
+                comando.limitePorCompra(),
+                comando.inicioVendas(),
+                comando.fimVendas());
         return repositorio.salvar(tipoIngresso);
     }
 
@@ -64,7 +66,7 @@ public class TipoIngressoService implements
     public TipoIngresso atualizar(Long id, DadosTipoIngresso dados) {
         TipoIngresso tipoIngresso = carregar(id);
         tipoIngresso.atualizarDados(dados.nome(), dados.gratuito(), dados.preco(), dados.taxaServico(),
-                dados.quantidadeTotal(), dados.limitePorCompra());
+                dados.quantidadeTotal(), dados.limitePorCompra(), dados.inicioVendas(), dados.fimVendas());
         return repositorio.salvar(tipoIngresso);
     }
 

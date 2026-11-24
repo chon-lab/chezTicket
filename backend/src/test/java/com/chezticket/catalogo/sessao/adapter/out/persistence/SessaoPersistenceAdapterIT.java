@@ -42,7 +42,7 @@ class SessaoPersistenceAdapterIT {
     }
 
     private Sessao novaSessao(Long eventoId, LocalDateTime inicio) {
-        return Sessao.agendar(eventoId, 1L, inicio, inicio.plusHours(3));
+        return Sessao.agendar(eventoId, 1L, null, inicio, inicio.plusHours(3));
     }
 
     @Test

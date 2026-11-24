@@ -6,9 +6,11 @@ import com.chezticket.vendas.reserva.application.port.in.CancelarReservaUseCase;
 import com.chezticket.vendas.reserva.application.port.in.ConsultarReservasUseCase;
 import com.chezticket.vendas.reserva.application.port.in.ReservarIngressosUseCase;
 import com.chezticket.vendas.reserva.domain.Reserva;
+import com.chezticket.shared.web.SessaoAutenticacao;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -18,7 +20,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Reservas", description = "Seleção e retenção temporária de ingressos antes da compra")
@@ -37,9 +38,11 @@ class ReservaController {
         this.cancelarReserva = cancelarReserva;
     }
 
-    @Operation(summary = "Lista as reservas de um participante")
+    @Operation(summary = "Lista as reservas do participante autenticado")
+    @ApiResponse(responseCode = "401", description = "Sem sessão ativa")
     @GetMapping
-    List<ReservaResponse> listar(@RequestParam Long participanteId) {
+    List<ReservaResponse> listar(HttpServletRequest httpRequest) {
+        Long participanteId = SessaoAutenticacao.usuarioIdObrigatorio(httpRequest);
         return consultarReservas.listarPorParticipante(participanteId).stream()
                 .map(ReservaResponse::de)
                 .toList();
@@ -56,11 +59,14 @@ class ReservaController {
             description = "Retém o estoque por 10 minutos (constante do serviço). "
                     + "Se a reserva não virar pedido até lá, ela expira e o estoque volta a ficar disponível.")
     @ApiResponse(responseCode = "201", description = "Reserva criada")
+    @ApiResponse(responseCode = "401", description = "Sem sessão ativa")
     @ApiResponse(responseCode = "409", description = "Estoque insuficiente para algum item")
-    @ApiResponse(responseCode = "422", description = "Participante ou tipo de ingresso inexistente")
+    @ApiResponse(responseCode = "422", description = "Tipo de ingresso inexistente")
     @PostMapping
-    ResponseEntity<ReservaResponse> reservar(@Valid @RequestBody CriarReservaRequest request) {
-        Reserva reserva = reservarIngressos.reservar(request.paraComando());
+    ResponseEntity<ReservaResponse> reservar(@Valid @RequestBody CriarReservaRequest request,
+            HttpServletRequest httpRequest) {
+        Long participanteId = SessaoAutenticacao.usuarioIdObrigatorio(httpRequest);
+        Reserva reserva = reservarIngressos.reservar(request.paraComando(participanteId));
         return ResponseEntity
                 .created(URI.create("/api/reservas/" + reserva.id()))
                 .body(ReservaResponse.de(reserva));

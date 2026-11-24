@@ -48,7 +48,7 @@ class SessaoServiceTest {
     }
 
     private Sessao agendadaExistente() {
-        return Sessao.reconstituir(1L, 1L, 1L, inicio, fim, StatusSessao.AGENDADA);
+        return Sessao.reconstituir(1L, 1L, 1L, null, inicio, fim, StatusSessao.AGENDADA);
     }
 
     @Test
@@ -57,7 +57,7 @@ class SessaoServiceTest {
         when(verificarLocal.localExiste(1L)).thenReturn(true);
         when(repositorio.salvar(any(Sessao.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Sessao sessao = service.agendar(new NovaSessao(1L, 1L, inicio, fim));
+        Sessao sessao = service.agendar(new NovaSessao(1L, 1L, null, inicio, fim));
 
         assertThat(sessao.status()).isEqualTo(StatusSessao.AGENDADA);
     }
@@ -66,7 +66,7 @@ class SessaoServiceTest {
     void naoDeveAgendarQuandoEventoNaoExiste() {
         when(verificarEvento.eventoExiste(99L)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.agendar(new NovaSessao(99L, 1L, inicio, fim)))
+        assertThatThrownBy(() -> service.agendar(new NovaSessao(99L, 1L, null, inicio, fim)))
                 .isInstanceOf(SessaoInvalidaException.class);
 
         verify(repositorio, never()).salvar(any());
@@ -77,7 +77,7 @@ class SessaoServiceTest {
         when(verificarEvento.eventoExiste(1L)).thenReturn(true);
         when(verificarLocal.localExiste(99L)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.agendar(new NovaSessao(1L, 99L, inicio, fim)))
+        assertThatThrownBy(() -> service.agendar(new NovaSessao(1L, 99L, null, inicio, fim)))
                 .isInstanceOf(SessaoInvalidaException.class);
 
         verify(repositorio, never()).salvar(any());
@@ -96,7 +96,7 @@ class SessaoServiceTest {
         when(verificarLocal.localExiste(2L)).thenReturn(true);
         when(repositorio.salvar(any(Sessao.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Sessao atualizada = service.atualizar(1L, new DadosSessao(2L, inicio, fim));
+        Sessao atualizada = service.atualizar(1L, new DadosSessao(2L, null, inicio, fim));
 
         assertThat(atualizada.localId()).isEqualTo(2L);
     }

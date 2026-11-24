@@ -11,9 +11,9 @@ import java.util.Objects;
  * Reserva temporária de ingressos (Figura 3 da modelagem). Modelo de domínio puro.
  *
  * <p>Representa a retenção de estoque enquanto o participante conclui (ou desiste de) uma
- * compra: nasce ATIVA com um prazo de expiração e termina CONVERTIDA (em um pedido, fora do
- * escopo deste módulo), EXPIRADA ou CANCELADA — nos dois últimos casos, o estoque retido
- * volta a ficar disponível.
+ * compra: nasce ATIVA com um prazo de expiração e termina CONVERTIDA (vira um {@code Pedido},
+ * módulo {@code vendas.pedido}), EXPIRADA ou CANCELADA — nos dois últimos casos, o estoque
+ * retido volta a ficar disponível.
  */
 public class Reserva {
 
@@ -74,6 +74,14 @@ public class Reserva {
             throw new TransicaoDeStatusDaReservaInvalidaException(status, StatusReserva.CANCELADA);
         }
         this.status = StatusReserva.CANCELADA;
+    }
+
+    /** Vira um {@code Pedido} (Figura 3) — chamado pelo módulo de pedido ao criar a compra. */
+    public void converter() {
+        if (status != StatusReserva.ATIVA) {
+            throw new TransicaoDeStatusDaReservaInvalidaException(status, StatusReserva.CONVERTIDA);
+        }
+        this.status = StatusReserva.CONVERTIDA;
     }
 
     private static void exigir(boolean condicao, String mensagem) {

@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.util.List;
+import java.util.Map;
 
 public record AtualizarEventoRequest(
         @NotNull
@@ -27,11 +29,18 @@ public record AtualizarEventoRequest(
         @Size(max = 255)
         String imagemCapa,
 
+        @Size(max = 255)
+        String imagemDivulgacao,
+
         @Schema(example = "FLEXIVEL")
-        PoliticaReembolso politicaReembolso) {
+        PoliticaReembolso politicaReembolso,
+
+        List<String> tags,
+
+        Map<String, String> redesSociais) {
 
     public DadosEvento paraComando() {
         return new DadosEvento(categoriaId, titulo, descricao,
-                classificacaoEtaria, imagemCapa, politicaReembolso);
+                classificacaoEtaria, imagemCapa, imagemDivulgacao, politicaReembolso, tags, redesSociais);
     }
 }

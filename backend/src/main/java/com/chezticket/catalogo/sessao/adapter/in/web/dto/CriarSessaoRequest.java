@@ -4,6 +4,7 @@ import com.chezticket.catalogo.sessao.application.port.in.NovaSessao;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 
 public record CriarSessaoRequest(
@@ -14,6 +15,11 @@ public record CriarSessaoRequest(
         @NotNull
         @Schema(description = "ID do local onde a sessão acontece", example = "1")
         Long localId,
+
+        @Size(max = 255)
+        @Schema(description = "Observação de endereço opcional, além do local estruturado",
+                example = "Entrada pelos fundos")
+        String endereco,
 
         @NotNull
         @Future
@@ -26,6 +32,6 @@ public record CriarSessaoRequest(
         LocalDateTime fim) {
 
     public NovaSessao paraComando() {
-        return new NovaSessao(eventoId, localId, inicio, fim);
+        return new NovaSessao(eventoId, localId, endereco, inicio, fim);
     }
 }

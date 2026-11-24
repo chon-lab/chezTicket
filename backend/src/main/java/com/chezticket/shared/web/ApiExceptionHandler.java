@@ -1,6 +1,7 @@
 package com.chezticket.shared.web;
 
 import com.chezticket.shared.domain.ConflitoException;
+import com.chezticket.shared.domain.NaoAutenticadoException;
 import com.chezticket.shared.domain.RecursoNaoEncontradoException;
 import com.chezticket.shared.domain.RegraDeNegocioException;
 import com.chezticket.shared.domain.AcessoNegadoException;
@@ -41,6 +42,11 @@ class ApiExceptionHandler {
     @ExceptionHandler(AcessoNegadoException.class)
     ProblemDetail acessoNegado(AcessoNegadoException ex) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
+    @ExceptionHandler(NaoAutenticadoException.class)
+    ProblemDetail naoAutenticado(NaoAutenticadoException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

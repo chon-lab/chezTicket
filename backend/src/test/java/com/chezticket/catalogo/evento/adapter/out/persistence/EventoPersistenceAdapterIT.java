@@ -27,7 +27,8 @@ class EventoPersistenceAdapterIT {
     EventoPersistenceAdapter adapter;
 
     private Evento novoRascunho(String titulo) {
-        return Evento.criarRascunho(2L, 1L, titulo, "Descricao de teste de integracao", null, null, null);
+        return Evento.criarRascunho(2L, 1L, titulo, "Descricao de teste de integracao", null, null, null, null,
+                null, null);
     }
 
     @Test

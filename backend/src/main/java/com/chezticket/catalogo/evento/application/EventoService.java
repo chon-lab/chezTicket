@@ -49,7 +49,10 @@ public class EventoService implements
                 comando.descricao(),
                 comando.classificacaoEtaria(),
                 comando.imagemCapa(),
-                comando.politicaReembolso());
+                comando.imagemDivulgacao(),
+                comando.politicaReembolso(),
+                comando.tags(),
+                comando.redesSociais());
         return repositorio.salvar(evento);
     }
 
@@ -63,7 +66,10 @@ public class EventoService implements
                 dados.descricao(),
                 dados.classificacaoEtaria(),
                 dados.imagemCapa(),
-                dados.politicaReembolso());
+                dados.imagemDivulgacao(),
+                dados.politicaReembolso(),
+                dados.tags(),
+                dados.redesSociais());
         return repositorio.salvar(evento);
     }
 

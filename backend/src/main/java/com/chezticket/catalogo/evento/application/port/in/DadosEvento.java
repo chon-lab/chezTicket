@@ -2,6 +2,8 @@ package com.chezticket.catalogo.evento.application.port.in;
 
 import com.chezticket.catalogo.evento.domain.ClassificacaoEtaria;
 import com.chezticket.catalogo.evento.domain.PoliticaReembolso;
+import java.util.List;
+import java.util.Map;
 
 /** Comando para atualizar os dados descritivos de um evento existente. */
 public record DadosEvento(
@@ -10,5 +12,8 @@ public record DadosEvento(
         String descricao,
         ClassificacaoEtaria classificacaoEtaria,
         String imagemCapa,
-        PoliticaReembolso politicaReembolso) {
+        String imagemDivulgacao,
+        PoliticaReembolso politicaReembolso,
+        List<String> tags,
+        Map<String, String> redesSociais) {
 }

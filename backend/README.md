@@ -60,9 +60,12 @@ curl -X POST http://localhost:8081/api/sessoes -H "Content-Type: application/jso
 curl -X POST http://localhost:8081/api/tipos-ingresso -H "Content-Type: application/json" \
      -d '{"sessaoId":1,"nome":"Inteira","gratuito":false,"preco":100.00,"taxaServico":10.00,"quantidadeTotal":200,"limitePorCompra":5}'
 
-# participanteId 4 vem do seed de demonstração (V4)
-curl -X POST http://localhost:8081/api/reservas -H "Content-Type: application/json" \
-     -d '{"participanteId":4,"itens":[{"tipoIngressoId":1,"quantidade":2}]}'
+# Reserva exige sessão autenticada (cookie) — cadastre/entre antes:
+curl -c cookies.txt -X POST http://localhost:8081/api/auth/cadastro -H "Content-Type: application/json" \
+     -d '{"nome":"Maria Oliveira","email":"maria@exemplo.com","senha":"senha123","cpf":"12345678900"}'
+
+curl -b cookies.txt -X POST http://localhost:8081/api/reservas -H "Content-Type: application/json" \
+     -d '{"itens":[{"tipoIngressoId":1,"quantidade":2}]}'
 ```
 
 ## Endpoints
@@ -150,6 +153,49 @@ curl -X DELETE http://localhost:8081/api/eventos/2 -H "X-Usuario-Id: 3"
 
 Reserva fica `ATIVA` por 10 minutos (constante no `ReservaService`); depois disso, um
 `@Scheduled` interno expira e libera o estoque automaticamente — não precisa chamar nada.
+
+### Autenticação — `/api/auth`
+
+Sessão simples por cookie (`JSESSIONID`), sem JWT. Cadastro cria usuário + participante +
+organizador juntos — toda conta compra ingresso e cria evento.
+
+| Método | Rota | Ação |
+|--------|------|------|
+| `POST` | `/cadastro` | cria a conta e já autentica → `409` e-mail/CPF já cadastrado |
+| `POST` | `/login` | `{email, senha}` → `401` se inválido (mensagem genérica) |
+| `POST` | `/logout` | invalida a sessão |
+| `GET`  | `/me` | dados da sessão atual → `401` sem sessão |
+
+### Perfil — `/api/perfil`
+
+| Método | Rota | Ação |
+|--------|------|------|
+| `GET` | `/` | agrega usuário + eventos que organiza + suas reservas → `401` sem sessão |
+
+### Cupom — `/api/cupons`
+
+Um cupom por evento (criado junto com ele, ver `/eventos/completo` abaixo); sem limite de usos.
+
+| Método | Rota | Ação |
+|--------|------|------|
+| `POST` | `/validacao` | `{eventoId, codigo}` → cupom válido, ou `404`/`409` (expirado) |
+
+### Evento completo — `POST /api/eventos/completo`
+
+Atalho multipart usado pelo assistente de criação do front: cria evento (com `tags`/
+`redesSociais`/imagem de divulgação) + sessão (endereço livre, sem exigir um `Local`
+estruturado) + tipos de ingresso (com janela de vendas opcional) + cupom opcional, numa
+transação só, publicando ao final se pedido. Exige sessão autenticada (o organizador é sempre
+quem está logado).
+
+Partes do multipart: `dados` (JSON) + `imagemCapa`/`imagemDivulgacao` (arquivos, opcionais).
+Imagens ficam em `chezticket.uploads-dir`, servidas em `/api/uploads/**`.
+
+```bash
+curl -b cookies.txt -X POST http://localhost:8081/api/eventos/completo \
+     -F 'dados={"categoriaId":1,"titulo":"Festival de Verão","descricao":"Shows ao ar livre.","endereco":"Praça Central, 100","inicio":"2026-12-20T19:00:00","fim":"2026-12-20T23:00:00","tags":["musica"],"redesSociais":{},"ingressos":[{"nome":"Inteira","gratuito":false,"preco":80,"taxaServico":8,"quantidadeTotal":100,"limitePorCompra":4}],"publicar":false};type=application/json' \
+     -F 'imagemCapa=@/caminho/para/capa.jpg'
+```
 
 ## Rodar sem Docker
 

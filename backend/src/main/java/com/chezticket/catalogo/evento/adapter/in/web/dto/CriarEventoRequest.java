@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.util.List;
+import java.util.Map;
 
 public record CriarEventoRequest(
         @NotNull
@@ -33,11 +35,21 @@ public record CriarEventoRequest(
         @Schema(example = "https://cdn.chezticket.dev/capas/festival-inverno.jpg")
         String imagemCapa,
 
+        @Size(max = 255)
+        @Schema(example = "https://cdn.chezticket.dev/divulgacao/festival-inverno.jpg")
+        String imagemDivulgacao,
+
         @Schema(description = "Padrão: PADRAO", example = "PADRAO")
-        PoliticaReembolso politicaReembolso) {
+        PoliticaReembolso politicaReembolso,
+
+        @Schema(example = "[\"Tecnologia\", \"ao vivo\"]")
+        List<String> tags,
+
+        @Schema(description = "Mapa rede -> URL (ex.: instagram, facebook, x, linkedin)")
+        Map<String, String> redesSociais) {
 
     public NovoEvento paraComando() {
         return new NovoEvento(organizadorId, categoriaId, titulo, descricao,
-                classificacaoEtaria, imagemCapa, politicaReembolso);
+                classificacaoEtaria, imagemCapa, imagemDivulgacao, politicaReembolso, tags, redesSociais);
     }
 }

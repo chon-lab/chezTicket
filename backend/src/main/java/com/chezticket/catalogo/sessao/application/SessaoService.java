@@ -42,16 +42,17 @@ public class SessaoService implements
     @Override
     public Sessao agendar(NovaSessao comando) {
         exigirEventoExistente(comando.eventoId());
-        exigirLocalExistente(comando.localId());
-        Sessao sessao = Sessao.agendar(comando.eventoId(), comando.localId(), comando.inicio(), comando.fim());
+        exigirLocalExistenteSeInformado(comando.localId());
+        Sessao sessao = Sessao.agendar(comando.eventoId(), comando.localId(), comando.endereco(),
+                comando.inicio(), comando.fim());
         return repositorio.salvar(sessao);
     }
 
     @Override
     public Sessao atualizar(Long sessaoId, DadosSessao dados) {
         Sessao sessao = carregar(sessaoId);
-        exigirLocalExistente(dados.localId());
-        sessao.atualizarDados(dados.localId(), dados.inicio(), dados.fim());
+        exigirLocalExistenteSeInformado(dados.localId());
+        sessao.atualizarDados(dados.localId(), dados.endereco(), dados.inicio(), dados.fim());
         return repositorio.salvar(sessao);
     }
 
@@ -108,8 +109,8 @@ public class SessaoService implements
         }
     }
 
-    private void exigirLocalExistente(Long localId) {
-        if (!verificarLocal.localExiste(localId)) {
+    private void exigirLocalExistenteSeInformado(Long localId) {
+        if (localId != null && !verificarLocal.localExiste(localId)) {
             throw new SessaoInvalidaException("Local inexistente: " + localId + ".");
         }
     }

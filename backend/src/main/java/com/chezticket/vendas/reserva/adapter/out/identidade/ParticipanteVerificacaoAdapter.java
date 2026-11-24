@@ -6,9 +6,9 @@ import org.springframework.stereotype.Component;
 @Component
 class ParticipanteVerificacaoAdapter implements VerificarParticipantePort {
 
-    private final ParticipanteJpaRepository participantes;
+    private final ParticipanteExistenciaJpaRepository participantes;
 
-    ParticipanteVerificacaoAdapter(ParticipanteJpaRepository participantes) {
+    ParticipanteVerificacaoAdapter(ParticipanteExistenciaJpaRepository participantes) {
         this.participantes = participantes;
     }
 

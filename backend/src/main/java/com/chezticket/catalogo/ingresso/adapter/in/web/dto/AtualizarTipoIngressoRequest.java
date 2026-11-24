@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public record AtualizarTipoIngressoRequest(
         @NotBlank
@@ -24,9 +25,14 @@ public record AtualizarTipoIngressoRequest(
         int quantidadeTotal,
 
         @Positive
-        int limitePorCompra) {
+        int limitePorCompra,
+
+        LocalDateTime inicioVendas,
+
+        LocalDateTime fimVendas) {
 
     public DadosTipoIngresso paraComando() {
-        return new DadosTipoIngresso(nome, gratuito, preco, taxaServico, quantidadeTotal, limitePorCompra);
+        return new DadosTipoIngresso(nome, gratuito, preco, taxaServico, quantidadeTotal, limitePorCompra,
+                inicioVendas, fimVendas);
     }
 }

@@ -2,6 +2,7 @@ package com.chezticket.vendas.reserva.application;
 
 import com.chezticket.vendas.reserva.application.port.in.CancelarReservaUseCase;
 import com.chezticket.vendas.reserva.application.port.in.ConsultarReservasUseCase;
+import com.chezticket.vendas.reserva.application.port.in.ConverterReservaUseCase;
 import com.chezticket.vendas.reserva.application.port.in.ExpirarReservasVencidasUseCase;
 import com.chezticket.vendas.reserva.application.port.in.ItemReservaComando;
 import com.chezticket.vendas.reserva.application.port.in.NovaReserva;
@@ -25,6 +26,7 @@ public class ReservaService implements
         ReservarIngressosUseCase,
         ConsultarReservasUseCase,
         CancelarReservaUseCase,
+        ConverterReservaUseCase,
         ExpirarReservasVencidasUseCase {
 
     /** Tempo que o participante tem para concluir a compra antes do estoque voltar a ficar livre. */
@@ -78,6 +80,13 @@ public class ReservaService implements
         Reserva reserva = carregar(id);
         reserva.cancelar();
         liberarEstoqueDaReserva(reserva);
+        return repositorio.salvar(reserva);
+    }
+
+    @Override
+    public Reserva converter(Long reservaId) {
+        Reserva reserva = carregar(reservaId);
+        reserva.converter();
         return repositorio.salvar(reserva);
     }
 

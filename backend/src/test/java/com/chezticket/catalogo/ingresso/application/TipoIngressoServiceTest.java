@@ -41,7 +41,7 @@ class TipoIngressoServiceTest {
 
     private TipoIngresso existente() {
         return TipoIngresso.reconstituir(1L, 1L, "Inteira", false, new BigDecimal("100.00"),
-                new BigDecimal("10.00"), 50, 0, 5, 0);
+                new BigDecimal("10.00"), 50, 0, 5, null, null, 0);
     }
 
     @Test
@@ -50,7 +50,7 @@ class TipoIngressoServiceTest {
         when(repositorio.salvar(any(TipoIngresso.class))).thenAnswer(inv -> inv.getArgument(0));
 
         TipoIngresso tipo = service.cadastrar(new NovoTipoIngresso(1L, "Inteira", false,
-                new BigDecimal("100.00"), new BigDecimal("10.00"), 50, 5));
+                new BigDecimal("100.00"), new BigDecimal("10.00"), 50, 5, null, null));
 
         assertThat(tipo.nome()).isEqualTo("Inteira");
         verify(repositorio).salvar(any(TipoIngresso.class));
@@ -60,7 +60,8 @@ class TipoIngressoServiceTest {
     void naoDeveCadastrarQuandoSessaoNaoExiste() {
         when(verificarSessao.sessaoExiste(99L)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.cadastrar(new NovoTipoIngresso(99L, "Inteira", true, null, null, 50, 5)))
+        assertThatThrownBy(() -> service.cadastrar(
+                new NovoTipoIngresso(99L, "Inteira", true, null, null, 50, 5, null, null)))
                 .isInstanceOf(TipoIngressoInvalidoException.class);
 
         verify(repositorio, never()).salvar(any());
@@ -80,7 +81,7 @@ class TipoIngressoServiceTest {
         when(repositorio.salvar(any(TipoIngresso.class))).thenAnswer(inv -> inv.getArgument(0));
 
         TipoIngresso atualizado = service.atualizar(1L, new DadosTipoIngresso("Inteira Promo", false,
-                new BigDecimal("80.00"), new BigDecimal("8.00"), 60, 4));
+                new BigDecimal("80.00"), new BigDecimal("8.00"), 60, 4, null, null));
 
         assertThat(atualizado.nome()).isEqualTo("Inteira Promo");
         assertThat(atualizado.quantidadeTotal()).isEqualTo(60);

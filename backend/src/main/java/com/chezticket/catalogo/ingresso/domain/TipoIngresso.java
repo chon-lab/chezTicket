@@ -1,8 +1,10 @@
 package com.chezticket.catalogo.ingresso.domain;
 
 import com.chezticket.catalogo.ingresso.domain.exception.EstoqueInsuficienteException;
+import com.chezticket.catalogo.ingresso.domain.exception.ForaDoPeriodoDeVendasException;
 import com.chezticket.catalogo.ingresso.domain.exception.TipoIngressoInvalidoException;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
@@ -26,11 +28,13 @@ public class TipoIngresso {
     private int quantidadeTotal;
     private int quantidadeVendida;
     private int limitePorCompra;
+    private LocalDateTime inicioVendas;
+    private LocalDateTime fimVendas;
     private final long versao;
 
     private TipoIngresso(Long id, Long sessaoId, String nome, boolean gratuito, BigDecimal preco,
             BigDecimal taxaServico, int quantidadeTotal, int quantidadeVendida, int limitePorCompra,
-            long versao) {
+            LocalDateTime inicioVendas, LocalDateTime fimVendas, long versao) {
         this.id = id;
         this.sessaoId = sessaoId;
         this.nome = nome;
@@ -40,14 +44,18 @@ public class TipoIngresso {
         this.quantidadeTotal = quantidadeTotal;
         this.quantidadeVendida = quantidadeVendida;
         this.limitePorCompra = limitePorCompra;
+        this.inicioVendas = inicioVendas;
+        this.fimVendas = fimVendas;
         this.versao = versao;
     }
 
     /** Cria um tipo de ingresso novo, sem nenhuma unidade vendida ainda. */
     public static TipoIngresso criar(Long sessaoId, String nome, boolean gratuito, BigDecimal preco,
-            BigDecimal taxaServico, int quantidadeTotal, int limitePorCompra) {
+            BigDecimal taxaServico, int quantidadeTotal, int limitePorCompra, LocalDateTime inicioVendas,
+            LocalDateTime fimVendas) {
         exigir(sessaoId != null, "A sessão do tipo de ingresso é obrigatória.");
         validarQuantidadeTotal(quantidadeTotal);
+        validarPeriodoDeVendas(inicioVendas, fimVendas);
         return new TipoIngresso(
                 null,
                 sessaoId,
@@ -58,6 +66,8 @@ public class TipoIngresso {
                 quantidadeTotal,
                 0,
                 validarLimitePorCompra(limitePorCompra, quantidadeTotal),
+                inicioVendas,
+                fimVendas,
                 0);
     }
 
@@ -71,7 +81,7 @@ public class TipoIngresso {
      */
     public static TipoIngresso reconstituir(Long id, Long sessaoId, String nome, boolean gratuito,
             BigDecimal preco, BigDecimal taxaServico, int quantidadeTotal, int quantidadeVendida,
-            int limitePorCompra, long versao) {
+            int limitePorCompra, LocalDateTime inicioVendas, LocalDateTime fimVendas, long versao) {
         return new TipoIngresso(
                 Objects.requireNonNull(id, "id"),
                 Objects.requireNonNull(sessaoId, "sessaoId"),
@@ -82,20 +92,25 @@ public class TipoIngresso {
                 quantidadeTotal,
                 quantidadeVendida,
                 limitePorCompra,
+                inicioVendas,
+                fimVendas,
                 versao);
     }
 
     public void atualizarDados(String nome, boolean gratuito, BigDecimal preco, BigDecimal taxaServico,
-            int quantidadeTotal, int limitePorCompra) {
+            int quantidadeTotal, int limitePorCompra, LocalDateTime inicioVendas, LocalDateTime fimVendas) {
         exigir(quantidadeTotal >= quantidadeVendida,
                 "A nova quantidade total (" + quantidadeTotal + ") não pode ser menor que a quantidade já "
                         + "vendida/reservada (" + quantidadeVendida + ").");
+        validarPeriodoDeVendas(inicioVendas, fimVendas);
         this.nome = validarNome(nome);
         this.gratuito = gratuito;
         this.preco = precoEfetivo(gratuito, preco);
         this.taxaServico = taxaEfetiva(gratuito, taxaServico);
         this.quantidadeTotal = quantidadeTotal;
         this.limitePorCompra = validarLimitePorCompra(limitePorCompra, quantidadeTotal);
+        this.inicioVendas = inicioVendas;
+        this.fimVendas = fimVendas;
     }
 
     /** Quantas unidades ainda podem ser vendidas/reservadas. */
@@ -108,9 +123,23 @@ public class TipoIngresso {
         return quantidade > 0 && quantidade <= quantidadeDisponivel();
     }
 
-    /** Reserva/vende {@code quantidade} unidades, respeitando o limite por compra e o estoque. */
+    /** Verdadeiro quando {@code agora} está dentro da janela de vendas (ou não há janela configurada). */
+    public boolean estaNoPeriodoDeVendas(LocalDateTime agora) {
+        if (inicioVendas != null && agora.isBefore(inicioVendas)) {
+            return false;
+        }
+        return fimVendas == null || !agora.isAfter(fimVendas);
+    }
+
+    /**
+     * Reserva/vende {@code quantidade} unidades, respeitando a janela de vendas, o limite por
+     * compra e o estoque.
+     */
     public void reservarUnidades(int quantidade) {
         exigir(quantidade > 0, "A quantidade deve ser maior que zero.");
+        if (!estaNoPeriodoDeVendas(LocalDateTime.now())) {
+            throw new ForaDoPeriodoDeVendasException(id);
+        }
         if (quantidade > limitePorCompra) {
             throw new TipoIngressoInvalidoException(
                     "Quantidade " + quantidade + " excede o limite de " + limitePorCompra + " por compra.");
@@ -143,6 +172,12 @@ public class TipoIngresso {
     private static void validarQuantidadeTotal(int quantidadeTotal) {
         if (quantidadeTotal <= 0) {
             throw new TipoIngressoInvalidoException("A quantidade total deve ser maior que zero.");
+        }
+    }
+
+    private static void validarPeriodoDeVendas(LocalDateTime inicioVendas, LocalDateTime fimVendas) {
+        if (inicioVendas != null && fimVendas != null && !fimVendas.isAfter(inicioVendas)) {
+            throw new TipoIngressoInvalidoException("O fim das vendas deve ser depois do início.");
         }
     }
 
@@ -216,6 +251,14 @@ public class TipoIngresso {
 
     public int limitePorCompra() {
         return limitePorCompra;
+    }
+
+    public LocalDateTime inicioVendas() {
+        return inicioVendas;
+    }
+
+    public LocalDateTime fimVendas() {
+        return fimVendas;
     }
 
     /** Valor de bloqueio otimista lido do banco; repassado ao adaptador de persistência em {@code salvar()}. */

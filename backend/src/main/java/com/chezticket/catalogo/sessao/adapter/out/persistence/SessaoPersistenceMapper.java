@@ -12,6 +12,7 @@ final class SessaoPersistenceMapper {
                 sessao.id(),
                 sessao.eventoId(),
                 sessao.localId(),
+                sessao.endereco(),
                 sessao.inicio(),
                 sessao.fim(),
                 sessao.status());
@@ -22,6 +23,7 @@ final class SessaoPersistenceMapper {
                 entidade.getId(),
                 entidade.getEventoId(),
                 entidade.getLocalId(),
+                entidade.getEndereco(),
                 entidade.getInicio(),
                 entidade.getFim(),
                 entidade.getStatus());

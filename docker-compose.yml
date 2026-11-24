@@ -42,6 +42,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${MARIADB_PASSWORD:-chezticket}
     ports:
       - "${BACKEND_HOST_PORT:-8081}:8081"
+    volumes:
+      - backend-uploads:/app/uploads
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health"]
       interval: 15s
@@ -62,3 +64,4 @@ services:
 
 volumes:
   mariadb-data:
+  backend-uploads:

@@ -52,7 +52,7 @@ class TipoIngressoPersistenceAdapterIT {
 
     private TipoIngresso novoTipo(Long sessaoId) {
         return TipoIngresso.criar(sessaoId, "Inteira", false, new BigDecimal("100.00"), new BigDecimal("10.00"),
-                50, 5);
+                50, 5, null, null);
     }
 
     @Test

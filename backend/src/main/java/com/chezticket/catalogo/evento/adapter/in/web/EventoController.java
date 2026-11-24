@@ -12,6 +12,7 @@ import com.chezticket.catalogo.evento.application.port.in.GerenciarCicloDeVidaDo
 import com.chezticket.catalogo.evento.application.port.in.RemoverEventoUseCase;
 import com.chezticket.catalogo.evento.domain.Evento;
 import com.chezticket.catalogo.evento.domain.StatusEvento;
+import com.chezticket.shared.web.UploadUrlResolver;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -41,17 +42,20 @@ class EventoController {
     private final ConsultarEventosUseCase consultarEventos;
     private final GerenciarCicloDeVidaDoEventoUseCase cicloDeVida;
     private final RemoverEventoUseCase removerEvento;
+    private final UploadUrlResolver uploads;
 
     EventoController(CriarEventoUseCase criarEvento,
             AtualizarEventoUseCase atualizarEvento,
             ConsultarEventosUseCase consultarEventos,
             GerenciarCicloDeVidaDoEventoUseCase cicloDeVida,
-            RemoverEventoUseCase removerEvento) {
+            RemoverEventoUseCase removerEvento,
+            UploadUrlResolver uploads) {
         this.criarEvento = criarEvento;
         this.atualizarEvento = atualizarEvento;
         this.consultarEventos = consultarEventos;
         this.cicloDeVida = cicloDeVida;
         this.removerEvento = removerEvento;
+        this.uploads = uploads;
     }
 
     @Operation(summary = "Lista eventos", description = "Filtros opcionais por status, categoria e organizador.")
@@ -61,7 +65,7 @@ class EventoController {
             @RequestParam(required = false) Long categoriaId,
             @RequestParam(required = false) Long organizadorId) {
         return consultarEventos.listar(new FiltroEventos(status, categoriaId, organizadorId)).stream()
-                .map(EventoResumoResponse::de)
+                .map(evento -> EventoResumoResponse.de(evento, uploads))
                 .toList();
     }
 
@@ -70,7 +74,7 @@ class EventoController {
     @ApiResponse(responseCode = "404", description = "Evento inexistente")
     @GetMapping("/{id}")
     EventoResponse detalhar(@PathVariable Long id) {
-        return EventoResponse.de(consultarEventos.buscarPorId(id));
+        return EventoResponse.de(consultarEventos.buscarPorId(id), uploads);
     }
 
     @Operation(summary = "Cria um evento em rascunho")
@@ -81,14 +85,14 @@ class EventoController {
         Evento evento = criarEvento.criar(request.paraComando());
         return ResponseEntity
                 .created(URI.create("/api/eventos/" + evento.id()))
-                .body(EventoResponse.de(evento));
+                .body(EventoResponse.de(evento, uploads));
     }
 
     @Operation(summary = "Atualiza os dados de um evento",
             description = "Permitido enquanto o evento estiver em RASCUNHO ou PUBLICADO.")
     @PutMapping("/{id}")
     EventoResponse atualizar(@PathVariable Long id, @Valid @RequestBody AtualizarEventoRequest request) {
-        return EventoResponse.de(atualizarEvento.atualizar(id, request.paraComando()));
+        return EventoResponse.de(atualizarEvento.atualizar(id, request.paraComando()), uploads);
     }
 
     @Operation(summary = "Remove um evento",
@@ -115,18 +119,18 @@ class EventoController {
     @ApiResponse(responseCode = "409", description = "Transição de status inválida")
     @PostMapping("/{id}/publicacao")
     EventoResponse publicar(@PathVariable Long id) {
-        return EventoResponse.de(cicloDeVida.publicar(id));
+        return EventoResponse.de(cicloDeVida.publicar(id), uploads);
     }
 
     @Operation(summary = "Cancela o evento", description = "Qualquer estado não terminal → CANCELADO.")
     @PostMapping("/{id}/cancelamento")
     EventoResponse cancelar(@PathVariable Long id) {
-        return EventoResponse.de(cicloDeVida.cancelar(id));
+        return EventoResponse.de(cicloDeVida.cancelar(id), uploads);
     }
 
     @Operation(summary = "Encerra o evento", description = "PUBLICADO ou ESGOTADO → ENCERRADO.")
     @PostMapping("/{id}/encerramento")
     EventoResponse encerrar(@PathVariable Long id) {
-        return EventoResponse.de(cicloDeVida.encerrar(id));
+        return EventoResponse.de(cicloDeVida.encerrar(id), uploads);
     }
 }

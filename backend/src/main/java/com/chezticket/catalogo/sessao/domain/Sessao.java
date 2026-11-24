@@ -10,54 +10,67 @@ import java.util.Objects;
  *
  * <p>Um evento tem uma ou mais sessões (Figura 2); cada sessão concentra os tipos de ingresso
  * vendidos para aquela ocorrência.
+ *
+ * <p>O local pode ser um {@code Local} estruturado (cadastrado via {@code /api/locais}) ou um
+ * endereço livre em texto — o assistente rápido de criação de evento só coleta o segundo. Uma
+ * sessão sempre tem pelo menos um dos dois.
  */
 public class Sessao {
 
     private Long id;
     private final Long eventoId;
     private Long localId;
+    private String endereco;
     private LocalDateTime inicio;
     private LocalDateTime fim;
     private StatusSessao status;
 
-    private Sessao(Long id, Long eventoId, Long localId, LocalDateTime inicio, LocalDateTime fim,
-            StatusSessao status) {
+    private Sessao(Long id, Long eventoId, Long localId, String endereco, LocalDateTime inicio,
+            LocalDateTime fim, StatusSessao status) {
         this.id = id;
         this.eventoId = eventoId;
         this.localId = localId;
+        this.endereco = endereco;
         this.inicio = inicio;
         this.fim = fim;
         this.status = status;
     }
 
-    /** Agenda uma sessão nova para um evento. */
-    public static Sessao agendar(Long eventoId, Long localId, LocalDateTime inicio, LocalDateTime fim) {
+    /** Agenda uma sessão nova para um evento, com local estruturado e/ou endereço livre. */
+    public static Sessao agendar(Long eventoId, Long localId, String endereco, LocalDateTime inicio,
+            LocalDateTime fim) {
         exigir(eventoId != null, "O evento da sessão é obrigatório.");
-        exigir(localId != null, "O local da sessão é obrigatório.");
+        String enderecoNormalizado = normalizarEndereco(endereco);
+        exigir(localId != null || enderecoNormalizado != null,
+                "Informe um local cadastrado ou um endereço para a sessão.");
         validarPeriodo(inicio, fim);
-        return new Sessao(null, eventoId, localId, inicio, fim, StatusSessao.AGENDADA);
+        return new Sessao(null, eventoId, localId, enderecoNormalizado, inicio, fim, StatusSessao.AGENDADA);
     }
 
     /** Reconstrói uma sessão já existente. Usado pelo adaptador de persistência. */
-    public static Sessao reconstituir(Long id, Long eventoId, Long localId, LocalDateTime inicio,
-            LocalDateTime fim, StatusSessao status) {
+    public static Sessao reconstituir(Long id, Long eventoId, Long localId, String endereco,
+            LocalDateTime inicio, LocalDateTime fim, StatusSessao status) {
         return new Sessao(
                 Objects.requireNonNull(id, "id"),
                 Objects.requireNonNull(eventoId, "eventoId"),
                 localId,
+                endereco,
                 inicio,
                 fim,
                 Objects.requireNonNull(status, "status"));
     }
 
-    /** Reagenda local/horário. Permitido apenas enquanto AGENDADA. */
-    public void atualizarDados(Long localId, LocalDateTime inicio, LocalDateTime fim) {
+    /** Reagenda local/endereço/horário. Permitido apenas enquanto AGENDADA. */
+    public void atualizarDados(Long localId, String endereco, LocalDateTime inicio, LocalDateTime fim) {
         if (status != StatusSessao.AGENDADA) {
             throw new SessaoInvalidaException("Uma sessão " + status + " não pode ser reagendada.");
         }
-        exigir(localId != null, "O local da sessão é obrigatório.");
+        String enderecoNormalizado = normalizarEndereco(endereco);
+        exigir(localId != null || enderecoNormalizado != null,
+                "Informe um local cadastrado ou um endereço para a sessão.");
         validarPeriodo(inicio, fim);
         this.localId = localId;
+        this.endereco = enderecoNormalizado;
         this.inicio = inicio;
         this.fim = fim;
     }
@@ -93,6 +106,14 @@ public class Sessao {
         exigir(fim.isAfter(inicio), "O fim da sessão deve ser depois do início.");
     }
 
+    private static String normalizarEndereco(String endereco) {
+        if (endereco == null) {
+            return null;
+        }
+        String limpo = endereco.strip();
+        return limpo.isEmpty() ? null : limpo;
+    }
+
     private static void exigir(boolean condicao, String mensagem) {
         if (!condicao) {
             throw new SessaoInvalidaException(mensagem);
@@ -109,6 +130,10 @@ public class Sessao {
 
     public Long localId() {
         return localId;
+    }
+
+    public String endereco() {
+        return endereco;
     }
 
     public LocalDateTime inicio() {

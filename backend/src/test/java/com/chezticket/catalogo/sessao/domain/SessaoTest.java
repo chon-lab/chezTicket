@@ -14,7 +14,7 @@ class SessaoTest {
     private final LocalDateTime fim = inicio.plusHours(3);
 
     private Sessao agendadaValida() {
-        return Sessao.agendar(1L, 1L, inicio, fim);
+        return Sessao.agendar(1L, 1L, null, inicio, fim);
     }
 
     @Test
@@ -26,18 +26,32 @@ class SessaoTest {
     }
 
     @Test
-    void naoDeveCriarSemEventoOuLocal() {
-        assertThatThrownBy(() -> Sessao.agendar(null, 1L, inicio, fim))
-                .isInstanceOf(SessaoInvalidaException.class);
-        assertThatThrownBy(() -> Sessao.agendar(1L, null, inicio, fim))
+    void naoDeveCriarSemEvento() {
+        assertThatThrownBy(() -> Sessao.agendar(null, 1L, null, inicio, fim))
                 .isInstanceOf(SessaoInvalidaException.class);
     }
 
     @Test
-    void naoDeveCriarComFimAntesOuIgualAoInicio() {
-        assertThatThrownBy(() -> Sessao.agendar(1L, 1L, inicio, inicio))
+    void naoDeveCriarSemLocalNemEndereco() {
+        assertThatThrownBy(() -> Sessao.agendar(1L, null, null, inicio, fim))
                 .isInstanceOf(SessaoInvalidaException.class);
-        assertThatThrownBy(() -> Sessao.agendar(1L, 1L, inicio, inicio.minusHours(1)))
+        assertThatThrownBy(() -> Sessao.agendar(1L, null, "  ", inicio, fim))
+                .isInstanceOf(SessaoInvalidaException.class);
+    }
+
+    @Test
+    void deveAceitarApenasEnderecoLivreSemLocalEstruturado() {
+        Sessao sessao = Sessao.agendar(1L, null, "Praça Central, 100", inicio, fim);
+
+        assertThat(sessao.localId()).isNull();
+        assertThat(sessao.endereco()).isEqualTo("Praça Central, 100");
+    }
+
+    @Test
+    void naoDeveCriarComFimAntesOuIgualAoInicio() {
+        assertThatThrownBy(() -> Sessao.agendar(1L, 1L, null, inicio, inicio))
+                .isInstanceOf(SessaoInvalidaException.class);
+        assertThatThrownBy(() -> Sessao.agendar(1L, 1L, null, inicio, inicio.minusHours(1)))
                 .isInstanceOf(SessaoInvalidaException.class);
     }
 
@@ -86,7 +100,7 @@ class SessaoTest {
         Sessao sessao = agendadaValida();
         sessao.iniciar();
 
-        assertThatThrownBy(() -> sessao.atualizarDados(2L, inicio, fim))
+        assertThatThrownBy(() -> sessao.atualizarDados(2L, null, inicio, fim))
                 .isInstanceOf(SessaoInvalidaException.class);
     }
 
@@ -96,7 +110,7 @@ class SessaoTest {
         LocalDateTime novoInicio = inicio.plusDays(1);
         LocalDateTime novoFim = novoInicio.plusHours(2);
 
-        sessao.atualizarDados(2L, novoInicio, novoFim);
+        sessao.atualizarDados(2L, null, novoInicio, novoFim);
 
         assertThat(sessao.localId()).isEqualTo(2L);
         assertThat(sessao.inicio()).isEqualTo(novoInicio);

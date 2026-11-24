@@ -1,6 +1,7 @@
 package com.chezticket.catalogo.ingresso.application.port.in;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 /** Comando para cadastrar um tipo de ingresso novo para uma sessão. */
 public record NovoTipoIngresso(
@@ -10,5 +11,7 @@ public record NovoTipoIngresso(
         BigDecimal preco,
         BigDecimal taxaServico,
         int quantidadeTotal,
-        int limitePorCompra) {
+        int limitePorCompra,
+        LocalDateTime inicioVendas,
+        LocalDateTime fimVendas) {
 }
