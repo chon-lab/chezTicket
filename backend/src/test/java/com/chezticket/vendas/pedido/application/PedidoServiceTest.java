@@ -25,8 +25,11 @@ import com.chezticket.vendas.pagamento.domain.exception.PagamentoNaoEncontradoEx
 import com.chezticket.vendas.pedido.application.port.in.ConfirmarPagamentoUseCase;
 import com.chezticket.vendas.pedido.application.port.in.NovoPedido;
 import com.chezticket.vendas.pedido.application.port.in.ResultadoPedido;
+import com.chezticket.vendas.pedido.application.port.out.ConsultarEmailDoParticipantePort;
 import com.chezticket.vendas.pedido.application.port.out.ConsultarTipoIngressoPort;
 import com.chezticket.vendas.pedido.application.port.out.CriarSessaoDeCheckoutPort;
+import com.chezticket.vendas.pedido.application.port.out.EnviarIngressosPorEmailPort;
+import com.chezticket.vendas.pedido.application.port.out.ItemEmailIngresso;
 import com.chezticket.vendas.pedido.application.port.out.PedidoRepositorio;
 import com.chezticket.vendas.pedido.application.port.out.ProcessarReembolsoNoGatewayPort;
 import com.chezticket.vendas.pedido.application.port.out.ReservaParaPedidoPort;
@@ -77,6 +80,12 @@ class PedidoServiceTest {
     ProcessarReembolsoNoGatewayPort processarReembolsoNoGateway;
 
     @Mock
+    ConsultarEmailDoParticipantePort emailDoParticipante;
+
+    @Mock
+    EnviarIngressosPorEmailPort enviarIngressosPorEmail;
+
+    @Mock
     ValidarCupomUseCase validarCupom;
 
     PedidoService service;
@@ -84,7 +93,8 @@ class PedidoServiceTest {
     @BeforeEach
     void setUp() {
         service = new PedidoService(pedidos, ingressos, pagamentos, reembolsos, reservas, tiposIngresso,
-                criarCheckout, processarReembolsoNoGateway, validarCupom);
+                criarCheckout, processarReembolsoNoGateway, emailDoParticipante, enviarIngressosPorEmail,
+                validarCupom);
     }
 
     @Test
@@ -94,6 +104,7 @@ class PedidoServiceTest {
         when(reservas.buscar(10L)).thenReturn(reserva);
         when(tiposIngresso.buscarPorId(1L)).thenReturn(tipoIngresso(1L, true, BigDecimal.ZERO, BigDecimal.ZERO));
         when(ingressos.salvar(any(Ingresso.class))).thenAnswer(inv -> comId((Ingresso) inv.getArgument(0), 1L));
+        when(emailDoParticipante.buscarEmail(4L)).thenReturn("comprador@teste.dev");
 
         ResultadoPedido resultado = service.criar(new NovoPedido(4L, 10L, null, null));
 
@@ -104,6 +115,11 @@ class PedidoServiceTest {
         verify(reservas, never()).estenderExpiracao(any(), any());
         verify(criarCheckout, never()).criar(any());
         verify(pagamentos, never()).salvar(any());
+
+        ArgumentCaptor<List<ItemEmailIngresso>> itensCaptor = ArgumentCaptor.forClass(List.class);
+        verify(enviarIngressosPorEmail).enviar(eq("comprador@teste.dev"), eq(900L), itensCaptor.capture());
+        assertThat(itensCaptor.getValue()).hasSize(2);
+        assertThat(itensCaptor.getValue().get(0).nomeDoTipo()).isEqualTo("Inteira");
     }
 
     @Test
@@ -174,16 +190,35 @@ class PedidoServiceTest {
         when(pedidos.buscarPorId(900L)).thenReturn(Optional.of(pendente));
         when(pedidos.salvar(any(Pedido.class))).thenAnswer(inv -> inv.getArgument(0));
         when(ingressos.salvar(any(Ingresso.class))).thenAnswer(inv -> comId((Ingresso) inv.getArgument(0), 1L));
+        when(tiposIngresso.buscarPorId(1L))
+                .thenReturn(tipoIngresso(1L, false, new BigDecimal("50.00"), new BigDecimal("5.00")));
+        when(emailDoParticipante.buscarEmail(4L)).thenReturn("comprador@teste.dev");
 
         ResultadoPedido resultado = service.confirmarPagamento(900L, "pi_123", MetodoPagamento.CARTAO_CREDITO);
 
         assertThat(resultado.pedido().status()).isEqualTo(StatusPedido.CONCLUIDO);
         assertThat(resultado.ingressos()).hasSize(2);
         verify(reservas).converter(10L);
+        verify(enviarIngressosPorEmail).enviar(eq("comprador@teste.dev"), eq(900L), any());
 
         ArgumentCaptor<Pagamento> captor = ArgumentCaptor.forClass(Pagamento.class);
         verify(pagamentos).salvar(captor.capture());
         assertThat(captor.getValue().idTransacao()).isEqualTo("pi_123");
+    }
+
+    @Test
+    void deveEmitirIngressosMesmoQuandoOEnvioDeEmailFalha() {
+        Pedido pendente = pedidoPendente(900L, 10L, new com.chezticket.vendas.pedido.domain.ItemPedido(1L, 2,
+                new BigDecimal("50.00")));
+        when(pedidos.buscarPorId(900L)).thenReturn(Optional.of(pendente));
+        when(pedidos.salvar(any(Pedido.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(ingressos.salvar(any(Ingresso.class))).thenAnswer(inv -> comId((Ingresso) inv.getArgument(0), 1L));
+        when(emailDoParticipante.buscarEmail(4L)).thenThrow(new RuntimeException("SMTP fora do ar"));
+
+        ResultadoPedido resultado = service.confirmarPagamento(900L, "pi_123", MetodoPagamento.CARTAO_CREDITO);
+
+        assertThat(resultado.pedido().status()).isEqualTo(StatusPedido.CONCLUIDO);
+        assertThat(resultado.ingressos()).hasSize(2);
     }
 
     @Test

@@ -32,6 +32,21 @@ spring:
       max-file-size: 10MB
       max-request-size: 25MB
 
+  mail:
+    # Gmail por padrão (porta 587, STARTTLS); troque o host/porta pra usar outro provedor.
+    # Sem usuário/senha, o envio de e-mail só é pulado (ver JavaMailEnviarEmailAdapter) —
+    # a compra do ingresso nunca falha por causa do e-mail.
+    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
+    port: ${SPRING_MAIL_PORT:587}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 server:
   port: ${SERVER_PORT:8081}
 
@@ -75,3 +90,7 @@ chezticket:
     # mensagem clara em vez de uma NullPointerException.
     secret-key: ${STRIPE_SECRET_KEY:}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  email:
+    # Remetente do e-mail de confirmação do ingresso. Por padrão, o mesmo endereço
+    # autenticado no SMTP (obrigatório para a maioria dos provedores, incl. Gmail).
+    remetente: ${CHEZTICKET_EMAIL_REMETENTE:${SPRING_MAIL_USERNAME:}}

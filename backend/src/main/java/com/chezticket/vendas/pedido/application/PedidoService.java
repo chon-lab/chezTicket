@@ -20,9 +20,12 @@ import com.chezticket.vendas.pedido.application.port.in.CriarPedidoUseCase;
 import com.chezticket.vendas.pedido.application.port.in.NovoPedido;
 import com.chezticket.vendas.pedido.application.port.in.ResultadoPedido;
 import com.chezticket.vendas.pedido.application.port.in.SolicitarReembolsoUseCase;
+import com.chezticket.vendas.pedido.application.port.out.ConsultarEmailDoParticipantePort;
 import com.chezticket.vendas.pedido.application.port.out.ConsultarTipoIngressoPort;
 import com.chezticket.vendas.pedido.application.port.out.CriarSessaoDeCheckoutPort;
+import com.chezticket.vendas.pedido.application.port.out.EnviarIngressosPorEmailPort;
 import com.chezticket.vendas.pedido.application.port.out.ItemDeCheckout;
+import com.chezticket.vendas.pedido.application.port.out.ItemEmailIngresso;
 import com.chezticket.vendas.pedido.application.port.out.PedidoRepositorio;
 import com.chezticket.vendas.pedido.application.port.out.ProcessarReembolsoNoGatewayPort;
 import com.chezticket.vendas.pedido.application.port.out.ReservaParaPedidoPort;
@@ -40,6 +43,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +56,8 @@ public class PedidoService implements
         ConfirmarPagamentoUseCase,
         CancelarPedidoUseCase,
         SolicitarReembolsoUseCase {
+
+    private static final Logger log = LoggerFactory.getLogger(PedidoService.class);
 
     /**
      * Quanto tempo o pagamento pode ficar em aberto no Stripe Checkout. Maior que o prazo
@@ -68,11 +75,14 @@ public class PedidoService implements
     private final ConsultarTipoIngressoPort tiposIngresso;
     private final CriarSessaoDeCheckoutPort criarCheckout;
     private final ProcessarReembolsoNoGatewayPort processarReembolsoNoGateway;
+    private final ConsultarEmailDoParticipantePort emailDoParticipante;
+    private final EnviarIngressosPorEmailPort enviarIngressosPorEmail;
     private final ValidarCupomUseCase validarCupom;
 
     public PedidoService(PedidoRepositorio pedidos, IngressoRepositorio ingressos, PagamentoRepositorio pagamentos,
             ReembolsoRepositorio reembolsos, ReservaParaPedidoPort reservas, ConsultarTipoIngressoPort tiposIngresso,
             CriarSessaoDeCheckoutPort criarCheckout, ProcessarReembolsoNoGatewayPort processarReembolsoNoGateway,
+            ConsultarEmailDoParticipantePort emailDoParticipante, EnviarIngressosPorEmailPort enviarIngressosPorEmail,
             ValidarCupomUseCase validarCupom) {
         this.pedidos = pedidos;
         this.ingressos = ingressos;
@@ -82,6 +92,8 @@ public class PedidoService implements
         this.tiposIngresso = tiposIngresso;
         this.criarCheckout = criarCheckout;
         this.processarReembolsoNoGateway = processarReembolsoNoGateway;
+        this.emailDoParticipante = emailDoParticipante;
+        this.enviarIngressosPorEmail = enviarIngressosPorEmail;
         this.validarCupom = validarCupom;
     }
 
@@ -253,7 +265,28 @@ public class PedidoService implements
                 emitidos.add(ingressos.salvar(Ingresso.emitir(pedido.id(), item.tipoIngressoId(), null)));
             }
         }
+        enviarEmailDeConfirmacao(pedido, emitidos);
         return emitidos;
+    }
+
+    /**
+     * Best-effort: qualquer falha (participante sem e-mail resolvível, SMTP fora do ar, etc.)
+     * só vira um aviso no log — o ingresso já foi emitido e a compra não deve falhar por causa
+     * da notificação.
+     */
+    private void enviarEmailDeConfirmacao(Pedido pedido, List<Ingresso> emitidos) {
+        try {
+            String destinatario = emailDoParticipante.buscarEmail(pedido.participanteId());
+            List<ItemEmailIngresso> itens = emitidos.stream()
+                    .map(ingresso -> new ItemEmailIngresso(
+                            tiposIngresso.buscarPorId(ingresso.tipoIngressoId()).nome(),
+                            ingresso.codigoQr()))
+                    .toList();
+            enviarIngressosPorEmail.enviar(destinatario, pedido.id(), itens);
+        } catch (Exception e) {
+            log.warn("Não foi possível enviar o e-mail de confirmação do pedido {}: {}", pedido.id(),
+                    e.getMessage());
+        }
     }
 
     private Pedido carregar(Long id) {
